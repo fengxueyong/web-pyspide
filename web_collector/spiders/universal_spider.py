@@ -9,16 +9,18 @@ class UniversalSpider(scrapy.Spider):
 
     name = "universal"
 
-    def __init__(self, urls="", content_types="text", depth=1, *args, **kwargs):
+    def __init__(self, urls="", content_types="text", depth=1, task_id=None, *args, **kwargs):
         """
         urls:          逗号分隔的 URL 列表
         content_types: 逗号分隔的目标内容类型 (text,image,news,video,audio)
         depth:         爬取深度（1=仅当前页）
+        task_id:       关联的 MySQL 抓取任务 ID（由 CrawlService 传入）
         """
         super().__init__(*args, **kwargs)
         self.start_urls = [u.strip() for u in urls.split(",") if u.strip()]
         self.target_types = [t.strip() for t in content_types.split(",") if t.strip()]
         self.max_depth = int(depth)
+        self.task_id = int(task_id) if task_id else None
 
         self.text_extractor = TextExtractor()
         self.image_extractor = ImageExtractor()

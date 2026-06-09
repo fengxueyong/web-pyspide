@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Query
 from pymongo import MongoClient
 
-from api.schemas.responses import WebPageOut, PaginatedResponse
+from api.schemas.responses import WebPageOut, paginated, success, error
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ def list_items(
         .limit(page_size)
     )
     items = [WebPageOut(**d) for d in docs]
-    return PaginatedResponse(total=total, page=page, page_size=page_size, items=items)
+    return paginated(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{url}")
@@ -40,5 +40,5 @@ def get_item(url: str):
     db = _db()
     doc = db.web_pages.find_one({"url": url}, {"html": 0})
     if not doc:
-        return {"error": "not found"}
-    return WebPageOut(**doc)
+        return error(4001, "内容不存在")
+    return success(WebPageOut(**doc))

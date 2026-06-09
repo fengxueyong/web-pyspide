@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Query
 from pymongo import MongoClient
 
-from api.schemas.responses import MediaOut, PaginatedResponse
+from api.schemas.responses import MediaOut, paginated
 
 router = APIRouter()
 
@@ -32,4 +32,4 @@ def list_media(
         .limit(page_size)
     )
     items = [MediaOut(**d) for d in docs]
-    return PaginatedResponse(total=total, page=page, page_size=page_size, items=items)
+    return paginated(items=items, total=total, page=page, page_size=page_size)

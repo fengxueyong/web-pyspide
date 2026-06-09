@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import items, media, crawl
+from api.schemas.responses import success
 
 app = FastAPI(title="Web Collector API", version="0.1.0")
 
@@ -19,4 +20,4 @@ app.include_router(crawl.router, prefix="/api/crawl", tags=["爬虫"])
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return success({"status": "ok"})

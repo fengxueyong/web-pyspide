@@ -1,0 +1,130 @@
+import asyncio
+import json
+import logging
+import os
+import subprocess
+import sys
+import threading
+
+from web_collector.db import get_session, crud
+from web_collector.service.ws_manager import ws_manager
+
+logger = logging.getLogger(__name__)
+
+PROGRESS_PREFIX = "__CRAWL_PROGRESS__:"
+
+
+class CrawlService:
+    """
+    爬虫业务逻辑：创建任务 → 执行爬取 → 更新状态
+    多表操作在事务中完成。
+    """
+
+    def create_and_start(self, website: str, res_type: str,
+                         depth: int, link_follow: bool,
+                         save_method: str) -> int:
+        """
+        创建抓取任务并启动后台爬取，返回 task_id。
+        事务：写入 t_scrap_task
+        """
+        session = next(get_session())
+        try:
+            task = crud.create_task(
+                session=session,
+                website=website,
+                res_type=res_type,
+                depth=depth,
+                link_follow=link_follow,
+                save_method=save_method,
+            )
+            task_id = task.id
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        thread = threading.Thread(
+            target=self._run_crawl,
+            args=(task_id, website, res_type, depth),
+            daemon=True,
+        )
+        thread.start()
+        return task_id
+
+    def _run_crawl(self, task_id: int, website: str,
+                   res_type: str, depth: int):
+        """
+        后台执行 Scrapy 爬虫（子进程），
+        逐行读取 stdout 中的进度信息并推送 WebSocket。
+        """
+        project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        env = os.environ.copy()
+        env["CRAWL_TASK_ID"] = str(task_id)
+
+        cmd = [
+            sys.executable, "-m", "scrapy", "crawl", "universal",
+            "-a", f"urls={website}",
+            "-a", f"content_types={res_type}",
+            "-a", f"depth={depth}",
+            "-a", f"task_id={task_id}",
+        ]
+
+        logger.info(f"[task={task_id}] 启动爬虫: {' '.join(cmd)}")
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, cwd=project_dir, env=env, bufsize=1,
+            )
+
+            for line in process.stdout:
+                line = line.strip()
+                if line.startswith(PROGRESS_PREFIX):
+                    payload = line[len(PROGRESS_PREFIX):]
+                    try:
+                        msg = json.loads(payload)
+                        loop.run_until_complete(
+                            ws_manager.notify(task_id, msg["event"], msg["data"])
+                        )
+                    except Exception:
+                        pass
+                else:
+                    logger.debug(f"[task={task_id}] {line}")
+
+            process.wait()
+            if process.returncode == 0:
+                logger.info(f"[task={task_id}] 爬取完成")
+            else:
+                logger.warning(f"[task={task_id}] 爬虫退出码={process.returncode}")
+
+        except Exception as e:
+            logger.error(f"[task={task_id}] 爬虫异常: {e}")
+
+        # 更新任务状态为 finished（事务）
+        session = next(get_session())
+        try:
+            crud.update_task_status(session, task_id, "finished")
+            session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+
+        # WS 通知任务完成
+        try:
+            loop.run_until_complete(
+                ws_manager.notify(task_id, "task_finished", {"task_id": task_id})
+            )
+        except Exception as e:
+            logger.warning(f"[task={task_id}] WS 通知失败: {e}")
+        finally:
+            loop.close()
+
+
+crawl_service = CrawlService()

@@ -1,14 +1,22 @@
 import datetime
+import json
 import logging
 from urllib.parse import urlparse
 
 import requests
 from pymongo import MongoClient, ASCENDING
 
-from web_collector.items import MediaItem
+from web_collector.items import MediaItem, WebPageItem
 from web_collector.storage import MinioStorage
+from web_collector.db import get_session, crud
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_progress(event: str, data: dict):
+    """向 stdout 输出进度 JSON，供 CrawlService 读取并推送 WebSocket"""
+    line = json.dumps({"event": event, "data": data}, ensure_ascii=False)
+    print(f"__CRAWL_PROGRESS__:{line}", flush=True)
 
 
 class MediaPipeline:
@@ -35,7 +43,7 @@ class MediaPipeline:
         if not isinstance(item, MediaItem):
             return item
 
-        adapter = item  # MediaItem 本身就是 Item 子类
+        adapter = item
 
         if not self.download_enabled:
             adapter["metadata"]["storage"] = "url_only"
@@ -47,7 +55,6 @@ class MediaPipeline:
                 adapter["metadata"]["storage"] = "download_failed"
                 return item
 
-            # 上传 MinIO
             object_name = self._object_name(item)
             content_type = item.get("mime_type") or ""
             minio_path = self.storage.upload(object_name, data, content_type)
@@ -69,7 +76,6 @@ class MediaPipeline:
 
     @staticmethod
     def _object_name(item):
-        """生成 MinIO 中的对象路径: media/{type}/{filename}"""
         path = urlparse(item["url"]).path
         ext = ""
         if "." in path:
@@ -78,6 +84,50 @@ class MediaPipeline:
         if ext and not name.endswith(f".{ext}"):
             name = f"{name}.{ext}"
         return f"media/{item['media_type']}/{name}"
+
+
+class MySQLResourcePipeline:
+    """将媒体资源记录写入 MySQL t_resources，并输出进度信息"""
+
+    def process_item(self, item, spider):
+        if not isinstance(item, MediaItem):
+            return item
+
+        task_id = getattr(spider, "task_id", None)
+        if not task_id:
+            return item
+
+        object_id = item["metadata"].get("minio_path") or item["metadata"].get("object_id") or ""
+        res_size = item["metadata"].get("size_bytes", 0)
+
+        session = next(get_session())
+        try:
+            crud.create_resource(
+                session=session,
+                scrap_task_id=task_id,
+                res_type=item["media_type"],
+                website=item["source_page"],
+                res_link=item["url"],
+                object_id=object_id or None,
+                res_size=res_size,
+                extension={"alt": item["metadata"].get("alt", "")},
+            )
+            session.commit()
+
+            # 输出进度供 WebSocket 推送
+            _emit_progress("resource_found", {
+                "task_id": task_id,
+                "res_link": item["url"],
+                "res_type": item["media_type"],
+                "object_id": object_id,
+            })
+        except Exception as e:
+            session.rollback()
+            logger.error(f"MySQL 资源记录失败 [{item['url']}]: {e}")
+        finally:
+            session.close()
+
+        return item
 
 
 class MongoDBPipeline:
@@ -106,13 +156,9 @@ class MongoDBPipeline:
         data["extracted_at"] = datetime.datetime.utcnow().isoformat()
 
         collection = self._pick_collection(item)
-        # 按 URL 去重：同一 URL 的相同类型只保留最新一条
-        self.db[collection].create_index(
-            [("url", ASCENDING)], background=True
-        )
-        self.db[collection].replace_one(
-            {"url": data["url"]}, data, upsert=True
-        )
+        self.db[collection].create_index([("url", ASCENDING)], background=True)
+        self.db[collection].replace_one({"url": data["url"]}, data, upsert=True)
+
         return item
 
     @staticmethod
