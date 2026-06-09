@@ -1,0 +1,79 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: web-collector-mongo
+    restart: always
+    ports:
+      - "192.168.188.2:27017:27017"
+    volumes:
+      - /data/mongodb/web-collector:/data/db
+      - ./mongo/mongod.conf:/etc/mongod.conf
+    command: ["mongod", "-f", "/etc/mongod.conf"]
+    networks:
+      - collector-net
+
+  minio:
+    image: minio/minio
+    container_name: web-collector-minio
+    restart: always
+    ports:
+      - "192.168.188.2:9000:9000"
+      - "192.168.188.2:9001:9001"
+    volumes:
+      - /data/minio/web-collector:/data
+      - ./minio/config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123456}
+    command: server /data --console-address ":9001"
+    networks:
+      - collector-net
+
+  mysql:
+    image: mysql:8
+    container_name: web-collector-mysql
+    restart: always
+    ports:
+      - "192.168.188.2:3306:3306"
+    volumes:
+      - /data/mysql/web-collector:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: web_collector
+    networks:
+      - collector-net
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: web-collector:latest
+    container_name: web-collector-api
+    restart: always
+    ports:
+      - "192.168.188.2:8000:8000"
+    depends_on:
+      - mongodb
+      - minio
+      - mysql
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DATABASE: web_collector
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-admin123456}
+      MINIO_SECURE: "false"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: web_collector
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root123456
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - collector-net
+
+networks:
+  collector-net:
+    driver: bridge

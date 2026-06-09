@@ -1,0 +1,10 @@
+scrapy>=2.11.0
+scrapling>=0.1.0
+pymongo>=4.6.0
+python-dotenv>=1.0.0
+itemadapter>=0.8.0
+minio>=7.2.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+sqlalchemy>=2.0
+pymysql>=1.1
