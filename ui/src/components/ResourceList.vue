@@ -61,7 +61,7 @@ const items = ref([])
 const loading = ref(false)
 const hasMore = ref(true)
 const page = ref(1)
-const pageSize = 20
+const page_size = 20
 const gridMode = ref(true)
 
 const previewVisible = ref(false)
