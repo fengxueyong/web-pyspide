@@ -2,11 +2,11 @@
   <section class="resource-section">
     <div class="filter-bar">
       <div class="filter-left">
-        <select v-model="filters.website" class="input filter-select website-select" @change="onFilterChange">
+        <select v-model="filters.website" class="input filter-select website-select">
           <option value="">--- 选择网址 ---</option>
           <option v-for="w in websites" :key="w" :value="w">{{ w }}</option>
         </select>
-        <select v-model="filters.res_type" class="select filter-select" @change="onFilterChange">
+        <select v-model="filters.res_type" class="select filter-select">
           <option value="all">全部类型</option>
           <option value="text/article">文本/文章</option>
           <option value="image">图片</option>
@@ -14,8 +14,9 @@
           <option value="audio">音频</option>
           <option value="video">视频</option>
         </select>
-        <input v-model="filters.min_time" type="datetime-local" class="input filter-date" placeholder="开始时间" @change="onFilterChange" />
-        <input v-model="filters.max_time" type="datetime-local" class="input filter-date" placeholder="结束时间" @change="onFilterChange" />
+        <input v-model="filters.min_time" type="datetime-local" class="input filter-date" placeholder="开始时间" />
+        <input v-model="filters.max_time" type="datetime-local" class="input filter-date" placeholder="结束时间" />
+        <button class="btn btn-query" @click="onFilterChange">查询</button>
       </div>
       <div class="filter-right">
         <button class="btn-icon" :class="{ active: !gridMode }" @click="gridMode = false" title="列表视图">
@@ -214,6 +215,22 @@ onUnmounted(() => {
 .filter-right {
   display: flex;
   gap: 4px;
+}
+
+.btn-query {
+  height: 34px;
+  padding: 0 16px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-query:hover {
+  background: #2563eb;
 }
 
 .btn-icon {

@@ -3,13 +3,13 @@
     <div class="header-main">
       <div class="input-group">
         <label class="label">抓取链接</label>
-        <input
+        <textarea
           v-model="url"
-          type="text"
           class="input url-input"
           placeholder="请输入网址链接..."
-          @keyup.enter="handleStart"
-        />
+          rows="1"
+          @keydown.enter.prevent="handleStart"
+        ></textarea>
       </div>
       <div class="input-group">
         <label class="label">资源类型</label>
@@ -141,6 +141,11 @@ async function handleStart() {
 
 .url-input {
   width: 420px;
+  min-height: 36px;
+  padding: 8px 12px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
 }
 
 .input, .select {
@@ -151,6 +156,10 @@ async function handleStart() {
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
+}
+
+textarea.input {
+  height: auto;
 }
 
 .input:focus, .select:focus {
