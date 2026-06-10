@@ -79,6 +79,7 @@ class CrawlService:
 
         env = os.environ.copy()
         env["CRAWL_TASK_ID"] = str(task_id)
+        env["PYTHONUNBUFFERED"] = "1"
 
         cmd = [
             sys.executable, "-m", "scrapy", "crawl", "universal",
@@ -108,16 +109,16 @@ class CrawlService:
                         loop.run_until_complete(
                             ws_manager.notify(task_id, msg["event"], msg["data"])
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"[task={task_id}] WS 通知失败: {e}")
                 else:
-                    logger.debug(f"[task={task_id}] {line}")
+                    logger.info(f"[task={task_id}] {line}")
 
             process.wait()
             if process.returncode == 0:
                 logger.info(f"[task={task_id}] 爬取完成")
             else:
-                logger.warning(f"[task={task_id}] 爬虫退出码={process.returncode}")
+                logger.warning(f"[task={task_id}] 爬虫退出码={process.returncode}，最后200行输出如上")
 
         except Exception as e:
             logger.error(f"[task={task_id}] 爬虫异常: {e}")
