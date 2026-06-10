@@ -1,7 +1,7 @@
 <template>
   <header class="page-header">
     <div class="header-main">
-      <div class="input-group">
+      <div class="input-group input-group-url">
         <label class="label">抓取链接</label>
         <textarea
           v-model="url"
@@ -21,19 +21,17 @@
       </div>
       <div class="input-group">
         <label class="label">代理配置</label>
-        <div class="proxy-row">
-          <select v-model="proxyId" class="select">
-            <option :value="-1">不使用代理</option>
-            <option v-for="p in proxyList" :key="p.id" :value="p.id">
-              {{ p.name }}
-            </option>
-          </select>
-          <button class="btn btn-setting" @click="showSettings = true">配置</button>
-        </div>
+        <select v-model="proxyId" class="select">
+          <option :value="-1">不使用代理</option>
+          <option v-for="p in proxyList" :key="p.id" :value="p.id">
+            {{ p.name }}
+          </option>
+        </select>
       </div>
       <button class="btn btn-start" :disabled="loading" @click="handleStart">
         {{ loading ? '抓取中...' : '开始抓取' }}
       </button>
+      <button class="btn-setting" @click="showSettings = true">配置</button>
     </div>
 
     <div class="header-hidden">
@@ -152,10 +150,10 @@ onMounted(loadProxies)
   left: 0;
   right: 0;
   z-index: 100;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: #f97316;
+  border-bottom: 1px solid #ea580c;
   padding: 16px 24px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .header-main {
@@ -170,14 +168,20 @@ onMounted(loadProxies)
   gap: 4px;
 }
 
+.input-group-url {
+  flex: 1;
+  min-width: 0;
+}
+
 .label {
   font-size: 13px;
-  color: #374151;
-  font-weight: 500;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
 }
 
 .url-input {
-  width: 420px;
+  width: 100%;
   min-height: 42px;
   padding: 8px 12px;
   resize: vertical;
@@ -209,47 +213,45 @@ textarea.input {
   width: 140px;
 }
 
-.proxy-row {
-  display: flex;
-  gap: 6px;
-}
-
-.proxy-row .select {
-  width: 110px;
-}
-
-.btn {
-  height: 36px;
-  padding: 0 14px;
+.btn-start {
+  height: 44px;
+  padding: 0 32px;
+  background: #dc2626;
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
 }
 
-.btn-start {
-  background: #3b82f6;
-  color: #fff;
-}
-
 .btn-start:hover:not(:disabled) {
-  background: #2563eb;
+  background: #b91c1c;
 }
 
 .btn-start:disabled {
-  background: #93c5fd;
+  background: #fca5a5;
   cursor: not-allowed;
 }
 
 .btn-setting {
-  background: #e5e7eb;
-  color: #374151;
+  height: 36px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  margin-left: auto;
 }
 
 .btn-setting:hover {
-  background: #d1d5db;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .header-hidden {
