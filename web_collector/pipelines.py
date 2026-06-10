@@ -102,7 +102,7 @@ class MySQLResourcePipeline:
         return item
 
     def _save_media(self, item, task_id):
-        object_id = item["metadata"].get("minio_path") or item["metadata"].get("object_id") or ""
+        object_id = item["metadata"].get("minio_path") or item.get("_mongo_id") or item["metadata"].get("object_id") or ""
         res_size = item["metadata"].get("size_bytes", 0)
 
         session = next(get_session())
@@ -133,6 +133,9 @@ class MySQLResourcePipeline:
         })
 
     def _save_page(self, item, task_id):
+        object_id = item.get("_mongo_id")
+        res_size = item.get("_content_size", 0)
+
         session = next(get_session())
         try:
             crud.create_resource(
@@ -141,8 +144,8 @@ class MySQLResourcePipeline:
                 res_type="text/article",
                 website=item["url"],
                 res_link=item["url"],
-                object_id=None,
-                res_size=0,
+                object_id=object_id,
+                res_size=res_size,
                 extension={"title": item.get("title", ""), "word_count": item["metadata"].get("word_count", 0)},
             )
             session.commit()
@@ -157,7 +160,7 @@ class MySQLResourcePipeline:
             "task_id": task_id,
             "res_link": item["url"],
             "res_type": "text/article",
-            "object_id": None,
+            "object_id": object_id,
         })
 
 
@@ -189,6 +192,16 @@ class MongoDBPipeline:
         collection = self._pick_collection(item)
         self.db[collection].create_index([("url", ASCENDING)], background=True)
         self.db[collection].replace_one({"url": data["url"]}, data, upsert=True)
+
+        # 保存后取回 MongoDB 文档 _id
+        doc = self.db[collection].find_one({"url": data["url"]}, {"_id": 1})
+        if doc:
+            item["_mongo_id"] = str(doc["_id"])
+
+        # 计算文本内容大小（用于回写 MySQL res_size）
+        if isinstance(item, WebPageItem):
+            text = item.get("text_content", "") or ""
+            item["_content_size"] = len(text.encode("utf-8"))
 
         return item
 

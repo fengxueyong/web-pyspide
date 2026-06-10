@@ -25,8 +25,8 @@ DEFAULT_REQUEST_HEADERS = {
 
 ITEM_PIPELINES = {
     "web_collector.pipelines.MediaPipeline": 200,
-    "web_collector.pipelines.MySQLResourcePipeline": 250,
-    "web_collector.pipelines.MongoDBPipeline": 300,
+    "web_collector.pipelines.MongoDBPipeline": 250,
+    "web_collector.pipelines.MySQLResourcePipeline": 300,
 }
 
 # MongoDB
