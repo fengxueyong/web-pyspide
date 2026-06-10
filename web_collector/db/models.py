@@ -21,8 +21,6 @@ class ProxyConfig(Base):
     create_time = Column(DateTime, nullable=True, default=datetime.datetime.utcnow, comment="创建时间")
     update_time = Column(DateTime, nullable=True, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, comment="更新时间")
 
-    tasks = relationship("ScrapTask", back_populates="proxy_config")
-
 
 class ScrapTask(Base):
     """抓取任务"""
@@ -47,7 +45,6 @@ class ScrapTask(Base):
     )
 
     resources = relationship("Resource", back_populates="task")
-    proxy_config = relationship("ProxyConfig", back_populates="tasks")
 
 
 class Resource(Base):
