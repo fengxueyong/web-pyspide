@@ -27,11 +27,13 @@ downloads/
 # Docker generated config (MinIO runtime config)
 docker/minio/config/*
 
-# Docker
-.dockerignore
+# UI / Node
+ui/node_modules/
 
 提示词.txt
 UI.md
 TABLE.md
 INF.md
 CLAUDE.md
+INF-RES.md
+INF-TASK.md

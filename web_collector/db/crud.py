@@ -102,6 +102,11 @@ def create_resource(session: Session, scrap_task_id: int,
     return res
 
 
+def list_distinct_websites(session: Session) -> list[str]:
+    rows = session.query(ScrapTask.website).distinct().all()
+    return [row[0] for row in rows]
+
+
 def list_resources(session: Session, scrap_task_id: int = None,
                    res_type: str = None,
                    page: int = 1,
