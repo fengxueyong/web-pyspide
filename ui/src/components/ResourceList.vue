@@ -103,8 +103,8 @@ async function loadMore() {
     items.value.push(...newItems)
     hasMore.value = items.value.length < (data.totalCount || 0)
     page.value++
-  } catch {
-    // silent
+  } catch (e) {
+    console.error('查询资源失败:', e)
   } finally {
     loading.value = false
   }
