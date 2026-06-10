@@ -82,7 +82,7 @@ services:
     container_name: web-collector-nginx
     restart: always
     ports:
-      - "192.168.188.2:8080:80"
+      - "192.168.188.2:8081:80"
     depends_on:
       - api
     networks:
