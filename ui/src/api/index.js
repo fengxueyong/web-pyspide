@@ -18,8 +18,8 @@ http.interceptors.response.use(
   }
 )
 
-export function startCrawl({ website, res_type, depth, link_follow, save_method }) {
-  return http.post('/crawl', { website, res_type, depth, link_follow, save_method })
+export function startCrawl({ website, res_type, depth, link_follow, save_method, proxy_id = -1 }) {
+  return http.post('/crawl', { website, res_type, depth, link_follow, save_method, proxy_id })
 }
 
 export function fetchResources({ page = 1, page_size = 20, website = '', res_type = 'all', min_time, max_time } = {}) {
@@ -35,6 +35,22 @@ export function getResourceDetail(resourceId) {
 
 export function fetchWebsites() {
   return http.get('/tasks/websites')
+}
+
+export function fetchProxies() {
+  return http.get('/proxy')
+}
+
+export function createProxy(data) {
+  return http.post('/proxy', data)
+}
+
+export function updateProxy(id, data) {
+  return http.put(`/proxy/${id}`, data)
+}
+
+export function deleteProxy(id) {
+  return http.delete(`/proxy/${id}`)
 }
 
 export default http

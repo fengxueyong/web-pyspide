@@ -59,9 +59,6 @@ services:
       - minio
       - mysql
     environment:
-      HTTP_PROXY: http://192.168.188.1:7865
-      HTTPS_PROXY: http://192.168.188.1:7865
-      NO_PROXY: localhost,127.0.0.1,mongodb,minio,mysql,api,192.168.188.2
       MONGO_URI: mongodb://mongodb:27017
       MONGO_DATABASE: web_collector
       MINIO_ENDPOINT: minio:9000

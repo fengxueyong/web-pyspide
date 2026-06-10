@@ -19,6 +19,18 @@
           </option>
         </select>
       </div>
+      <div class="input-group">
+        <label class="label">代理配置</label>
+        <div class="proxy-row">
+          <select v-model="proxyId" class="select">
+            <option :value="-1">不使用代理</option>
+            <option v-for="p in proxyList" :key="p.id" :value="p.id">
+              {{ p.name }}
+            </option>
+          </select>
+          <button class="btn btn-setting" @click="showSettings = true">配置</button>
+        </div>
+      </div>
       <button class="btn btn-start" :disabled="loading" @click="handleStart">
         {{ loading ? '抓取中...' : '开始抓取' }}
       </button>
@@ -59,12 +71,18 @@
       </div>
     </div>
   </header>
+
+  <SettingsDialog
+    :visible="showSettings"
+    @close="onSettingsClose"
+  />
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { startCrawl } from '../api'
+import { ref, onMounted } from 'vue'
+import { startCrawl, fetchProxies } from '../api'
 import { useWebSocket } from '../composables/useWebSocket'
+import SettingsDialog from './SettingsDialog.vue'
 
 const emit = defineEmits(['crawl-started'])
 
@@ -82,9 +100,25 @@ const resType = ref('all')
 const depth = ref(1)
 const linkFollow = ref(0)
 const saveMethod = ref('download')
+const proxyId = ref(-1)
+const proxyList = ref([])
 const loading = ref(false)
+const showSettings = ref(false)
 
 const { connected, messages, connect } = useWebSocket()
+
+async function loadProxies() {
+  try {
+    proxyList.value = await fetchProxies()
+  } catch {
+    proxyList.value = []
+  }
+}
+
+function onSettingsClose() {
+  showSettings.value = false
+  loadProxies()
+}
 
 async function handleStart() {
   if (!url.value.trim()) return
@@ -97,6 +131,7 @@ async function handleStart() {
       depth: depth.value,
       link_follow: linkFollow.value,
       save_method: saveMethod.value,
+      proxy_id: proxyId.value,
     })
     connect(data.task_id)
     emit('crawl-started', url.value.trim())
@@ -106,6 +141,8 @@ async function handleStart() {
     loading.value = false
   }
 }
+
+onMounted(loadProxies)
 </script>
 
 <style scoped>
@@ -172,17 +209,29 @@ textarea.input {
   width: 140px;
 }
 
-.btn-start {
+.proxy-row {
+  display: flex;
+  gap: 6px;
+}
+
+.proxy-row .select {
+  width: 110px;
+}
+
+.btn {
   height: 36px;
-  padding: 0 20px;
-  background: #3b82f6;
-  color: #fff;
+  padding: 0 14px;
   border: none;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
+}
+
+.btn-start {
+  background: #3b82f6;
+  color: #fff;
 }
 
 .btn-start:hover:not(:disabled) {
@@ -192,6 +241,15 @@ textarea.input {
 .btn-start:disabled {
   background: #93c5fd;
   cursor: not-allowed;
+}
+
+.btn-setting {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-setting:hover {
+  background: #d1d5db;
 }
 
 .header-hidden {
