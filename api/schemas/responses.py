@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ── 统一响应模型 ──
@@ -60,6 +60,7 @@ class CrawlRequest(BaseModel):
     depth: int = 1
     link_follow: bool = False
     save_method: str = "download"
+    proxy_id: int = Field(default=-1, description="代理配置ID，-1表示不走代理")
 
 
 class CrawlResponse(BaseModel):
@@ -70,3 +71,31 @@ class CrawlResult(BaseModel):
     url: str
     types_detected: list[str]
     items_count: int
+
+
+# ── ProxyConfig ──
+
+class ProxyConfigOut(BaseModel):
+    id: int
+    name: str
+    proxy_http: Optional[str] = None
+    proxy_https: Optional[str] = None
+    username: Optional[str] = None
+    create_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+
+
+class ProxyConfigCreate(BaseModel):
+    name: str
+    proxy_http: Optional[str] = None
+    proxy_https: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class ProxyConfigUpdate(BaseModel):
+    name: Optional[str] = None
+    proxy_http: Optional[str] = None
+    proxy_https: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None

@@ -57,6 +57,7 @@ def trigger_crawl(req: CrawlRequest):
             depth=req.depth,
             link_follow=req.link_follow,
             save_method=req.save_method,
+            proxy_id=req.proxy_id,
         )
     except Exception as e:
         logger.exception("创建抓取任务失败")

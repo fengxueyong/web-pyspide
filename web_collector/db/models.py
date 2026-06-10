@@ -1,11 +1,27 @@
 import datetime
 
 from sqlalchemy import (
-    Column, Integer, BigInteger, String, Text, DateTime, Boolean, ForeignKey, JSON, Index,
+    Column, Integer, BigInteger, String, Text, DateTime, ForeignKey, JSON, Index,
 )
 from sqlalchemy.orm import relationship
 
 from .engine import Base
+
+
+class ProxyConfig(Base):
+    """代理配置"""
+    __tablename__ = "t_proxy_config"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment="代理配置ID")
+    name = Column(String(128), nullable=False, comment="配置名称")
+    proxy_http = Column(String(512), nullable=True, comment="HTTP代理地址")
+    proxy_https = Column(String(512), nullable=True, comment="HTTPS代理地址")
+    username = Column(String(256), nullable=True, comment="认证用户名")
+    password = Column(String(512), nullable=True, comment="认证密码")
+    create_time = Column(DateTime, nullable=True, default=datetime.datetime.utcnow, comment="创建时间")
+    update_time = Column(DateTime, nullable=True, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, comment="更新时间")
+
+    tasks = relationship("ScrapTask", back_populates="proxy_config")
 
 
 class ScrapTask(Base):
@@ -24,12 +40,14 @@ class ScrapTask(Base):
     status = Column(String(16), nullable=False, default="running", comment="任务状态：running-运行中, finished-已完成, cancel-已取消")
     res_number = Column(Integer, nullable=False, default=0, comment="抓取资源数")
     extension = Column(JSON, nullable=True, comment="扩展字段（JSON），可空")
+    proxy_id = Column(Integer, nullable=False, default=-1, comment="代理配置ID，-1表示不走代理")
 
     __table_args__ = (
         Index("idx_task_query", "website_hash", "res_type", "depth", "link_follow", "save_method"),
     )
 
     resources = relationship("Resource", back_populates="task")
+    proxy_config = relationship("ProxyConfig", back_populates="tasks")
 
 
 class Resource(Base):

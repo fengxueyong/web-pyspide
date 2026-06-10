@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import items, media, crawl, resources, tasks
+from api.routes import items, media, crawl, resources, tasks, proxy
 from api.schemas.responses import success
 
 # ── 日志配置 ──
@@ -38,6 +38,7 @@ app.include_router(media.router, prefix="/api/media", tags=["媒体"])
 app.include_router(crawl.router, prefix="/api/crawl", tags=["爬虫"])
 app.include_router(resources.router, prefix="/api/resources", tags=["资源"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["任务"])
+app.include_router(proxy.router, prefix="/api/proxy", tags=["代理"])
 
 
 @app.get("/api/health")

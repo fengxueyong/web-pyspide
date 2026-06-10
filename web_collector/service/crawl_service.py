@@ -33,7 +33,7 @@ class CrawlService:
 
     def create_and_start(self, website: str, res_type: str,
                          depth: int, link_follow: bool,
-                         save_method: str) -> int:
+                         save_method: str, proxy_id: int = -1) -> int:
         """
         创建抓取任务并启动后台爬取，返回 task_id。
         事务：写入 t_scrap_task
@@ -47,6 +47,7 @@ class CrawlService:
                 depth=depth,
                 link_follow=link_follow,
                 save_method=save_method,
+                proxy_id=proxy_id,
             )
             task_id = task.id
             session.commit()
@@ -58,14 +59,14 @@ class CrawlService:
 
         thread = threading.Thread(
             target=self._run_crawl,
-            args=(task_id, website, res_type, depth),
+            args=(task_id, website, res_type, depth, proxy_id),
             daemon=True,
         )
         thread.start()
         return task_id
 
     def _run_crawl(self, task_id: int, website: str,
-                   res_type: str, depth: int):
+                   res_type: str, depth: int, proxy_id: int = -1):
         # 转换资源类型为蜘蛛识别的 content_types
         spider_types = RES_TYPE_MAP.get(res_type, "")
         if not spider_types:
@@ -80,6 +81,32 @@ class CrawlService:
         env = os.environ.copy()
         env["CRAWL_TASK_ID"] = str(task_id)
         env["PYTHONUNBUFFERED"] = "1"
+
+        # 根据 proxy_id 配置子进程代理环境变量
+        if proxy_id == -1:
+            # 不走代理：清除可能继承的代理环境变量
+            env.pop("HTTP_PROXY", None)
+            env.pop("HTTPS_PROXY", None)
+            env.pop("http_proxy", None)
+            env.pop("https_proxy", None)
+        else:
+            # 从数据库读取代理配置
+            session = next(get_session())
+            try:
+                config = crud.get_proxy_config(session, proxy_id)
+                if config:
+                    if config.proxy_http:
+                        env["HTTP_PROXY"] = config.proxy_http
+                    if config.proxy_https:
+                        env["HTTPS_PROXY"] = config.proxy_https
+            except Exception:
+                logger.exception(f"[task={task_id}] 读取代理配置失败，不使用代理")
+                env.pop("HTTP_PROXY", None)
+                env.pop("HTTPS_PROXY", None)
+                env.pop("http_proxy", None)
+                env.pop("https_proxy", None)
+            finally:
+                session.close()
 
         cmd = [
             sys.executable, "-m", "scrapy", "crawl", "universal",

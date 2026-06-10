@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS t_scrap_task (
     status        VARCHAR(16)     NOT NULL DEFAULT 'running'  COMMENT '任务状态：running-运行中, finished-已完成, cancel-已取消',
     res_number  INT             NOT NULL DEFAULT 0          COMMENT '抓取资源数',
     extension     JSON                                      COMMENT '扩展字段，可空',
+    proxy_id      INT           NOT NULL DEFAULT -1          COMMENT '代理配置ID，-1表示不走代理，其他值关联t_proxy_config.id',
     INDEX idx_task_query (website_hash, res_type, depth, link_follow, save_method)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抓取任务';
 
@@ -37,4 +38,16 @@ CREATE TABLE IF NOT EXISTS t_resources (
     INDEX idx_task_resource (scrap_task_id, res_link(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抓取资源';
 
+-- 代理配置表
+CREATE TABLE IF NOT EXISTS t_proxy_config (
+    id            INT             AUTO_INCREMENT PRIMARY KEY  COMMENT '代理配置ID',
+    name          VARCHAR(128)    NOT NULL                    COMMENT '配置名称',
+    proxy_http    VARCHAR(512)                                COMMENT 'HTTP代理地址',
+    proxy_https   VARCHAR(512)                                COMMENT 'HTTPS代理地址',
+    username      VARCHAR(256)                                COMMENT '认证用户名',
+    password      VARCHAR(512)                                COMMENT '认证密码',
+    create_time   DATETIME        DEFAULT CURRENT_TIMESTAMP   COMMENT '创建时间',
+    update_time   DATETIME        DEFAULT CURRENT_TIMESTAMP
+                                  ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='代理配置';
 
