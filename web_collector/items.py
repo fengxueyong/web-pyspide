@@ -11,6 +11,8 @@ class WebPageItem(scrapy.Item):
     metadata = scrapy.Field()
     extracted_at = scrapy.Field()
     depth = scrapy.Field()
+    _mongo_id = scrapy.Field()
+    _content_size = scrapy.Field()
 
 
 class MediaItem(scrapy.Item):
@@ -22,3 +24,5 @@ class MediaItem(scrapy.Item):
     mime_type = scrapy.Field()
     metadata = scrapy.Field()
     extracted_at = scrapy.Field()
+    _mongo_id = scrapy.Field()
+    _content_size = scrapy.Field()
