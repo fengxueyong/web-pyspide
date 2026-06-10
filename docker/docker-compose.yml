@@ -74,6 +74,20 @@ services:
     networks:
       - collector-net
 
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/nginx/Dockerfile
+    image: web-collector-nginx:latest
+    container_name: web-collector-nginx
+    restart: always
+    ports:
+      - "192.168.188.2:8080:80"
+    depends_on:
+      - api
+    networks:
+      - collector-net
+
 networks:
   collector-net:
     driver: bridge
