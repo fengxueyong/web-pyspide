@@ -14,6 +14,17 @@ logger = logging.getLogger(__name__)
 PROGRESS_PREFIX = "__CRAWL_PROGRESS__:"
 
 
+# API 资源类型 → 蜘蛛 content_types 映射
+RES_TYPE_MAP = {
+    "all": "text,news,image,video,audio,doc",
+    "text/article": "text,news",
+    "image": "image",
+    "video": "video",
+    "audio": "audio",
+    "doc": "doc",
+}
+
+
 class CrawlService:
     """
     爬虫业务逻辑：创建任务 → 执行爬取 → 更新状态
@@ -55,6 +66,11 @@ class CrawlService:
 
     def _run_crawl(self, task_id: int, website: str,
                    res_type: str, depth: int):
+        # 转换资源类型为蜘蛛识别的 content_types
+        spider_types = RES_TYPE_MAP.get(res_type, "")
+        if not spider_types:
+            logger.warning(f"[task={task_id}] 不支持的资源类型: {res_type}，跳过爬取")
+            return
         """
         后台执行 Scrapy 爬虫（子进程），
         逐行读取 stdout 中的进度信息并推送 WebSocket。
@@ -67,7 +83,7 @@ class CrawlService:
         cmd = [
             sys.executable, "-m", "scrapy", "crawl", "universal",
             "-a", f"urls={website}",
-            "-a", f"content_types={res_type}",
+            "-a", f"content_types={spider_types}",
             "-a", f"depth={depth}",
             "-a", f"task_id={task_id}",
         ]

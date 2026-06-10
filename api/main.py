@@ -1,8 +1,28 @@
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import items, media, crawl, resources, tasks
 from api.schemas.responses import success
+
+# ── 日志配置 ──
+_log_dir = os.getenv("LOG_DIR", "logs")
+os.makedirs(_log_dir, exist_ok=True)
+
+_log_file = os.path.join(_log_dir, "web-collector.log")
+
+_handler_file = RotatingFileHandler(_log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
+_handler_console = logging.StreamHandler()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[_handler_console, _handler_file],
+)
 
 app = FastAPI(title="Web Collector API", version="0.1.0")
 

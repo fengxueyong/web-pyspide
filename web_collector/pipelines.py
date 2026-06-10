@@ -87,16 +87,21 @@ class MediaPipeline:
 
 
 class MySQLResourcePipeline:
-    """将媒体资源记录写入 MySQL t_resources，并输出进度信息"""
+    """将资源记录写入 MySQL t_resources，并输出进度信息"""
 
     def process_item(self, item, spider):
-        if not isinstance(item, MediaItem):
-            return item
-
         task_id = getattr(spider, "task_id", None)
         if not task_id:
             return item
 
+        if isinstance(item, MediaItem):
+            self._save_media(item, task_id)
+        elif isinstance(item, WebPageItem):
+            self._save_page(item, task_id)
+
+        return item
+
+    def _save_media(self, item, task_id):
         object_id = item["metadata"].get("minio_path") or item["metadata"].get("object_id") or ""
         res_size = item["metadata"].get("size_bytes", 0)
 
@@ -113,21 +118,47 @@ class MySQLResourcePipeline:
                 extension={"alt": item["metadata"].get("alt", "")},
             )
             session.commit()
-
-            # 输出进度供 WebSocket 推送
-            _emit_progress("resource_found", {
-                "task_id": task_id,
-                "res_link": item["url"],
-                "res_type": item["media_type"],
-                "object_id": object_id,
-            })
         except Exception as e:
             session.rollback()
             logger.error(f"MySQL 资源记录失败 [{item['url']}]: {e}")
+            return
         finally:
             session.close()
 
-        return item
+        _emit_progress("resource_found", {
+            "task_id": task_id,
+            "res_link": item["url"],
+            "res_type": item["media_type"],
+            "object_id": object_id,
+        })
+
+    def _save_page(self, item, task_id):
+        session = next(get_session())
+        try:
+            crud.create_resource(
+                session=session,
+                scrap_task_id=task_id,
+                res_type="text/article",
+                website=item["url"],
+                res_link=item["url"],
+                object_id=None,
+                res_size=0,
+                extension={"title": item.get("title", ""), "word_count": item["metadata"].get("word_count", 0)},
+            )
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.error(f"MySQL 页面记录失败 [{item['url']}]: {e}")
+            return
+        finally:
+            session.close()
+
+        _emit_progress("resource_found", {
+            "task_id": task_id,
+            "res_link": item["url"],
+            "res_type": "text/article",
+            "object_id": None,
+        })
 
 
 class MongoDBPipeline:

@@ -5,7 +5,7 @@
     @click="$emit('preview', resource)"
   >
     <div class="card-thumb">
-      <template v-if="resource.res_type === 'pic'">
+      <template v-if="resource.res_type === 'image'">
         <img :src="resource.res_link" :alt="resource.res_link" @error="onImgError" />
       </template>
       <template v-else-if="resource.res_type === 'video'">
@@ -64,7 +64,7 @@ defineEmits(['preview'])
 
 const typeLabels = {
   'text/article': '文章',
-  pic: '图片',
+  image: '图片',
   doc: '文档',
   audio: '音频',
   video: '视频',

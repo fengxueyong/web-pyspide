@@ -5,7 +5,7 @@
         <button class="modal-close" @click="$emit('close')">&times;</button>
 
         <div v-if="resource" class="preview-content">
-          <template v-if="resource.res_type === 'pic'">
+          <template v-if="resource.res_type === 'image'">
             <img :src="resource.res_link" class="preview-img" alt="preview" @error="onMediaError" />
           </template>
 
@@ -70,7 +70,7 @@ defineEmits(['close'])
 
 const typeLabels = {
   'text/article': '文本/文章',
-  pic: '图片',
+  image: '图片',
   doc: '文档',
   audio: '音频',
   video: '视频',

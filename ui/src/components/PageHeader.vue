@@ -71,7 +71,7 @@ const emit = defineEmits(['crawl-started'])
 const typeOptions = [
   { label: '全部', value: 'all' },
   { label: '文本/文章', value: 'text/article' },
-  { label: '图片', value: 'pic' },
+  { label: '图片', value: 'image' },
   { label: '文档', value: 'doc' },
   { label: '音频', value: 'audio' },
   { label: '视频', value: 'video' },

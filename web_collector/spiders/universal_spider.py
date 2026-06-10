@@ -1,7 +1,10 @@
 import scrapy
 
 from web_collector.items import WebPageItem, MediaItem
-from web_collector.extractors import ContentClassifier, TextExtractor, ImageExtractor, NewsExtractor
+from web_collector.extractors import (
+    ContentClassifier, TextExtractor, ImageExtractor,
+    NewsExtractor, DocExtractor, VideoExtractor, AudioExtractor,
+)
 
 
 class UniversalSpider(scrapy.Spider):
@@ -25,6 +28,9 @@ class UniversalSpider(scrapy.Spider):
         self.text_extractor = TextExtractor()
         self.image_extractor = ImageExtractor()
         self.news_extractor = NewsExtractor()
+        self.doc_extractor = DocExtractor()
+        self.video_extractor = VideoExtractor()
+        self.audio_extractor = AudioExtractor()
 
     def parse(self, response):
         html = response.text
@@ -45,6 +51,15 @@ class UniversalSpider(scrapy.Spider):
 
             if ctype == "image" and ("image" in detected or "gallery" in detected):
                 yield from self._extract_images(html, url)
+
+            if ctype == "doc":
+                yield from self._extract_docs(html, url)
+
+            if ctype == "video":
+                yield from self._extract_videos(html, url)
+
+            if ctype == "audio":
+                yield from self._extract_audios(html, url)
 
     def _extract_text(self, html, url):
         data = self.text_extractor.extract(html, url)
@@ -75,6 +90,42 @@ class UniversalSpider(scrapy.Spider):
                 "og_description": data["og_description"],
             },
         )
+
+    def _extract_docs(self, html, url):
+        docs = self.doc_extractor.extract(html, url)
+        for doc in docs:
+            yield MediaItem(
+                url=doc["url"],
+                source_page=url,
+                media_type="doc",
+                filename=doc["id"],
+                metadata={
+                    "format": doc["format"],
+                    "text": doc["text"],
+                },
+            )
+
+    def _extract_videos(self, html, url):
+        videos = self.video_extractor.extract(html, url)
+        for v in videos:
+            yield MediaItem(
+                url=v["url"],
+                source_page=url,
+                media_type="video",
+                filename=v["id"],
+                metadata={"format": v["format"], "source_type": v["source_type"]},
+            )
+
+    def _extract_audios(self, html, url):
+        audios = self.audio_extractor.extract(html, url)
+        for a in audios:
+            yield MediaItem(
+                url=a["url"],
+                source_page=url,
+                media_type="audio",
+                filename=a["id"],
+                metadata={"format": a["format"], "source_type": a["source_type"]},
+            )
 
     def _extract_images(self, html, url):
         images = self.image_extractor.extract(html, url)

@@ -9,7 +9,7 @@
         <select v-model="filters.res_type" class="select filter-select" @change="onFilterChange">
           <option value="all">全部类型</option>
           <option value="text/article">文本/文章</option>
-          <option value="pic">图片</option>
+          <option value="image">图片</option>
           <option value="doc">文档</option>
           <option value="audio">音频</option>
           <option value="video">视频</option>
