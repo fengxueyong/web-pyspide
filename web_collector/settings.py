@@ -13,6 +13,10 @@ CONCURRENT_REQUESTS = 4
 DOWNLOAD_DELAY = 1.0
 COOKIES_ENABLED = False
 
+DOWNLOADER_MIDDLEWARES = {
+    "web_collector.middlewares.ProxyMiddleware": 100,
+}
+
 DEFAULT_REQUEST_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
