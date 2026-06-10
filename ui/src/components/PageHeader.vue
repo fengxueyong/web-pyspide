@@ -7,7 +7,7 @@
           v-model="url"
           class="input url-input"
           placeholder="请输入网址链接..."
-          rows="1"
+          rows="4"
           @keydown.enter.prevent="handleStart"
         ></textarea>
       </div>
@@ -141,11 +141,12 @@ async function handleStart() {
 
 .url-input {
   width: 420px;
-  min-height: 36px;
+  min-height: 42px;
   padding: 8px 12px;
   resize: vertical;
   font-family: inherit;
   line-height: 1.4;
+  overflow: auto;
 }
 
 .input, .select {
