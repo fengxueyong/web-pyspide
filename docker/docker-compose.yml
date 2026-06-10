@@ -20,8 +20,8 @@ services:
       - "192.168.188.2:9000:9000"
       - "192.168.188.2:9001:9001"
     volumes:
-      - /data/minio/web-collector:/data
-      - ./minio/config:/root/.minio
+      - /data/minio/web-collector/data:/data
+      - /data/minio/web-collector/config:/root/.minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123456}
@@ -48,7 +48,7 @@ services:
   api:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/api/Dockerfile
     image: web-collector:latest
     container_name: web-collector-api
     restart: always

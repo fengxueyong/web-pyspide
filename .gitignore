@@ -24,9 +24,6 @@ Thumbs.db
 # Project specific
 downloads/
 
-# Docker generated config (MinIO runtime config)
-docker/minio/config/*
-
 # UI / Node
 ui/node_modules/
 
