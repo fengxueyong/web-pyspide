@@ -47,7 +47,7 @@ class ResourceService:
             filters = []
             if website:
                 filters.append(Resource.website == website)
-            if res_type:
+            if res_type and res_type != "all":
                 filters.append(Resource.res_type == res_type)
             if min_time is not None and max_time is not None:
                 filters.append(Resource.create_time.between(min_time, max_time))
