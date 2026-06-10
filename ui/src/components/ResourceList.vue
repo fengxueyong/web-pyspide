@@ -76,16 +76,11 @@ const filters = ref({
   max_time: '',
 })
 
-let filterTimer = null
-
 function onFilterChange() {
-  clearTimeout(filterTimer)
-  filterTimer = setTimeout(() => {
-    items.value = []
-    page.value = 1
-    hasMore.value = true
-    loadMore()
-  }, 400)
+  items.value = []
+  page.value = 1
+  hasMore.value = true
+  loadMore()
 }
 
 async function loadMore() {
