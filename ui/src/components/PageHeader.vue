@@ -31,8 +31,9 @@
       <button class="btn btn-start" :disabled="loading" @click="handleStart">
         {{ loading ? '抓取中...' : '开始抓取' }}
       </button>
-      <button class="btn-setting" @click="showSettings = true">配置</button>
     </div>
+
+    <button class="btn-setting" @click="showSettings = true">配置</button>
 
     <div class="header-hidden">
       <div class="hidden-item">
@@ -150,10 +151,11 @@ onMounted(loadProxies)
   left: 0;
   right: 0;
   z-index: 100;
-  background: #f97316;
-  border-bottom: 1px solid #ea580c;
+  background-color: #eaf0f6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Ccircle cx='60' cy='60' r='22' fill='none' stroke='rgba(80,140,200,0.08)' stroke-width='1.5'/%3E%3Ccircle cx='60' cy='60' r='14' fill='none' stroke='rgba(80,140,200,0.06)' stroke-width='1'/%3E%3Ccircle cx='60' cy='60' r='4' fill='rgba(80,140,200,0.05)'/%3E%3Cellipse cx='60' cy='35' rx='6' ry='12' fill='none' stroke='rgba(80,140,200,0.07)' stroke-width='0.8' transform='rotate(0 60 60)'/%3E%3Cellipse cx='60' cy='35' rx='6' ry='12' fill='none' stroke='rgba(80,140,200,0.07)' stroke-width='0.8' transform='rotate(45 60 60)'/%3E%3Cellipse cx='60' cy='35' rx='6' ry='12' fill='none' stroke='rgba(80,140,200,0.07)' stroke-width='0.8' transform='rotate(90 60 60)'/%3E%3Cellipse cx='60' cy='35' rx='6' ry='12' fill='none' stroke='rgba(80,140,200,0.07)' stroke-width='0.8' transform='rotate(135 60 60)'/%3E%3C/svg%3E");
+  border-bottom: 1px solid #c8d6e5;
   padding: 16px 24px 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .header-main {
@@ -175,9 +177,8 @@ onMounted(loadProxies)
 
 .label {
   font-size: 13px;
-  color: #fff;
+  color: #2c3e50;
   font-weight: 600;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
 }
 
 .url-input {
@@ -237,21 +238,23 @@ textarea.input {
 }
 
 .btn-setting {
-  height: 36px;
-  padding: 0 16px;
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  height: 32px;
+  padding: 0 14px;
+  background: rgba(80, 120, 180, 0.15);
+  color: #2c3e50;
+  border: 1px solid rgba(80, 120, 180, 0.3);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
-  margin-left: auto;
 }
 
 .btn-setting:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(80, 120, 180, 0.25);
 }
 
 .header-hidden {
@@ -277,9 +280,9 @@ textarea.input {
 
 .progress-feed {
   margin-top: 10px;
-  max-height: 120px;
+  height: 120px;
   overflow-y: auto;
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 6px;
   padding: 8px 12px;
 }

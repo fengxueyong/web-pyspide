@@ -27,6 +27,7 @@ function onCrawlStarted(website) {
 }
 
 .main-content {
+  padding-top: 240px;
   padding-bottom: 40px;
 }
 </style>
