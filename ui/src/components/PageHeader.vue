@@ -59,17 +59,18 @@
         </select>
       </div>
     </div>
-
-    <div v-if="messages.length > 0" class="progress-feed">
-      <div
-        v-for="(msg, idx) in messages"
-        :key="idx"
-        class="progress-item"
-      >
-        {{ msg.event === 'resource_found' ? msg.data.res_link : msg.event }}
-      </div>
-    </div>
   </header>
+
+  <div class="progress-feed">
+    <div v-if="messages.length === 0" class="progress-placeholder">暂无抓取记录</div>
+    <div
+      v-for="(msg, idx) in messages"
+      :key="idx"
+      class="progress-item"
+    >
+      {{ msg.event === 'resource_found' ? msg.data.res_link : msg.event }}
+    </div>
+  </div>
 
   <SettingsDialog
     :visible="showSettings"
@@ -279,12 +280,17 @@ textarea.input {
 }
 
 .progress-feed {
-  margin-top: 10px;
-  height: 120px;
+  height: 100px;
   overflow-y: auto;
   background: rgba(255, 255, 255, 0.85);
-  border-radius: 6px;
   padding: 8px 12px;
+}
+
+.progress-placeholder {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 36px 0;
 }
 
 .progress-item {
