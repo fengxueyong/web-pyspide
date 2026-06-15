@@ -14,10 +14,9 @@ logger = logging.getLogger(__name__)
 PROGRESS_PREFIX = "__CRAWL_PROGRESS__:"
 
 
-# API 资源类型 → 蜘蛛 content_types 映射
+# API 资源类型 → 蜘蛛 content_types 映射（仅图片/文档/视频）
 RES_TYPE_MAP = {
-    "all": "text,news,image,video,audio,doc",
-    "text/article": "text,news",
+    "all": "image,video,doc",
     "image": "image",
     "video": "video",
     "audio": "audio",

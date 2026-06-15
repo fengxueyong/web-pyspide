@@ -177,7 +177,7 @@ watch(lastMessage, (msg) => {
   if (!msg) return
   if (msg.event === 'resource_found') {
     const resource = msg.data
-    addLog('success', `[${resource.res_status || 200}] ${resource.res_link}`)
+    addLog('success', resource.res_link)
     crawledResources.value.push(resource)
     emit('resources-update', [...crawledResources.value])
   } else if (msg.event === 'error') {
