@@ -14,7 +14,8 @@ class ImageExtractor:
 
         for img in page.css("img"):
             # 优先用 data-src（懒加载），再降级到 src
-            src = (img.attrib.get("data-src") or
+            src = (img.attrib.get("lazysrc") or
+                   img.attrib.get("data-src") or
                    img.attrib.get("data-original") or
                    img.attrib.get("src") or "")
             if not src or src.startswith("data:") or src.startswith("blob:"):

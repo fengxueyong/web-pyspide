@@ -94,14 +94,28 @@ class MySQLResourcePipeline:
         if not task_id:
             return item
 
+        # 防御：忽略 text/article 资源（前端"全部类型"仅含 image/video/doc）
+        if isinstance(item, WebPageItem):
+            spider_types = getattr(spider, "target_types", [])
+            if not any(t in spider_types for t in ("text", "news")):
+                return item
+            self._save_page(item, task_id)
+            return item
+
         if isinstance(item, MediaItem):
             self._save_media(item, task_id)
-        elif isinstance(item, WebPageItem):
-            self._save_page(item, task_id)
 
         return item
 
     def _save_media(self, item, task_id):
+        # 同一任务中相同链接去重
+        session_check = next(get_session())
+        try:
+            if crud.resource_exists(session_check, task_id, item["url"]):
+                return
+        finally:
+            session_check.close()
+
         object_id = item["metadata"].get("minio_path") or item.get("_mongo_id") or item["metadata"].get("object_id") or ""
         res_size = item["metadata"].get("size_bytes", 0)
 
@@ -135,6 +149,13 @@ class MySQLResourcePipeline:
     def _save_page(self, item, task_id):
         object_id = item.get("_mongo_id")
         res_size = item.get("_content_size", 0)
+
+        session_check = next(get_session())
+        try:
+            if crud.resource_exists(session_check, task_id, item["url"]):
+                return
+        finally:
+            session_check.close()
 
         session = next(get_session())
         try:

@@ -34,6 +34,9 @@ class UniversalSpider(scrapy.Spider):
         self.video_extractor = VideoExtractor()
         self.audio_extractor = AudioExtractor()
 
+        # 全局 URL 去重（同一次爬取中相同链接只处理一次）
+        self._seen_urls = set()
+
     def parse(self, response):
         html = response.text
         url = response.url
@@ -113,6 +116,13 @@ class UniversalSpider(scrapy.Spider):
             domains.add(f"www.{hostname}")
         return domains
 
+    def _dedup_url(self, url: str) -> bool:
+        """返回 True 表示首次见到的 URL，False 表示重复"""
+        if url in self._seen_urls:
+            return False
+        self._seen_urls.add(url)
+        return True
+
     def _extract_text(self, html, url):
         data = self.text_extractor.extract(html, url)
         return WebPageItem(
@@ -146,6 +156,8 @@ class UniversalSpider(scrapy.Spider):
     def _extract_docs(self, html, url):
         docs = self.doc_extractor.extract(html, url)
         for doc in docs:
+            if not self._dedup_url(doc["url"]):
+                continue
             yield MediaItem(
                 url=doc["url"],
                 source_page=url,
@@ -160,6 +172,8 @@ class UniversalSpider(scrapy.Spider):
     def _extract_videos(self, html, url):
         videos = self.video_extractor.extract(html, url)
         for v in videos:
+            if not self._dedup_url(v["url"]):
+                continue
             yield MediaItem(
                 url=v["url"],
                 source_page=url,
@@ -171,6 +185,8 @@ class UniversalSpider(scrapy.Spider):
     def _extract_audios(self, html, url):
         audios = self.audio_extractor.extract(html, url)
         for a in audios:
+            if not self._dedup_url(a["url"]):
+                continue
             yield MediaItem(
                 url=a["url"],
                 source_page=url,
@@ -182,6 +198,8 @@ class UniversalSpider(scrapy.Spider):
     def _extract_images(self, html, url):
         images = self.image_extractor.extract(html, url)
         for img in images:
+            if not self._dedup_url(img["url"]):
+                continue
             yield MediaItem(
                 url=img["url"],
                 source_page=url,

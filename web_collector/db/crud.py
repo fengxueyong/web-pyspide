@@ -80,6 +80,16 @@ def update_task_extension(session: Session, task_id: int,
 
 # ── Resource ──
 
+def resource_exists(session: Session, scrap_task_id: int,
+                    res_link: str) -> bool:
+    """检查同一任务中是否已存在相同资源链接"""
+    row = session.query(Resource.id).filter(
+        Resource.scrap_task_id == scrap_task_id,
+        Resource.res_link == res_link,
+    ).first()
+    return row is not None
+
+
 def create_resource(session: Session, scrap_task_id: int,
                     res_type: str, website: str,
                     res_link: str | None = None,
