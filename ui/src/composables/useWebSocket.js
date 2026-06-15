@@ -4,6 +4,7 @@ export function useWebSocket() {
   let ws = null
   const connected = ref(false)
   const messages = ref([])
+  const lastMessage = ref(null)
 
   function connect(taskId) {
     if (ws) disconnect()
@@ -19,8 +20,11 @@ export function useWebSocket() {
       try {
         const data = JSON.parse(event.data)
         messages.value.push(data)
+        lastMessage.value = data
       } catch {
-        messages.value.push({ text: event.data })
+        const fallback = { text: event.data }
+        messages.value.push(fallback)
+        lastMessage.value = fallback
       }
     }
 
@@ -46,5 +50,5 @@ export function useWebSocket() {
     disconnect()
   })
 
-  return { connected, messages, connect, disconnect }
+  return { connected, messages, lastMessage, connect, disconnect }
 }

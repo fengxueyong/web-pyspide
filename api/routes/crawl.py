@@ -1,6 +1,8 @@
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import requests
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response
 
 from api.schemas.responses import (
     CrawlRequest, CrawlResponse, success, error,
@@ -64,6 +66,24 @@ def trigger_crawl(req: CrawlRequest):
         return error(3001, f"创建任务失败: {e}")
 
     return success(CrawlResponse(task_id=task_id))
+
+
+@router.get("/proxy-image")
+async def proxy_image(url: str):
+    """
+    图片代理：服务端拉取图片返回，避免浏览器 Origin 头触发防盗链。
+    """
+    try:
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "image/jpeg")
+        return Response(
+            content=resp.content,
+            media_type=content_type,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"代理拉取图片失败: {e}")
 
 
 @router.websocket("/ws/{task_id}")

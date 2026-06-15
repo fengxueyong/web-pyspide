@@ -93,7 +93,7 @@
           <div class="thumb-preview">
             <img
               v-if="r.res_type === 'image'"
-              :src="r.res_link"
+              :src="proxyUrl(r.res_link)"
               :alt="r.res_link"
               class="thumb-img"
               @error="onImgError"
@@ -201,12 +201,17 @@ function formatTime(t) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function proxyUrl(url) {
+  if (!url) return ''
+  return `/api/crawl/proxy-image?url=${encodeURIComponent(url)}`
+}
+
 function onImgError(e) {
   e.target.style.display = 'none'
 }
 
 function openLink(url) {
-  if (url) window.open(url, '_blank')
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function setupObserver() {

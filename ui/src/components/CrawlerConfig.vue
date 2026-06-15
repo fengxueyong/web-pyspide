@@ -131,7 +131,7 @@ import { useWebSocket } from '../composables/useWebSocket'
 
 const emit = defineEmits(['crawl-started', 'resources-update'])
 
-const { connected, messages, connect } = useWebSocket()
+const { connected, messages, lastMessage, connect } = useWebSocket()
 
 // Form state
 const url = ref('')
@@ -172,23 +172,22 @@ watch(logs, () => {
   })
 }, { deep: true })
 
-// Watch WebSocket messages
-watch(messages, (msgs) => {
-  msgs.forEach(msg => {
-    if (msg.event === 'resource_found') {
-      const resource = msg.data
-      addLog('success', `[${resource.res_status || 200}] ${resource.res_link}`)
-      crawledResources.value.push(resource)
-      emit('resources-update', [...crawledResources.value])
-    } else if (msg.event === 'error') {
-      addLog('error', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
-    } else if (msg.event === 'info') {
-      addLog('info', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
-    } else if (msg.event === 'complete' || msg.event === 'task_finished') {
-      addLog('success', '抓取完成')
-      isRunning.value = false
-    }
-  })
+// Watch WebSocket messages (single message at a time via lastMessage)
+watch(lastMessage, (msg) => {
+  if (!msg) return
+  if (msg.event === 'resource_found') {
+    const resource = msg.data
+    addLog('success', `[${resource.res_status || 200}] ${resource.res_link}`)
+    crawledResources.value.push(resource)
+    emit('resources-update', [...crawledResources.value])
+  } else if (msg.event === 'error') {
+    addLog('error', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
+  } else if (msg.event === 'info') {
+    addLog('info', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
+  } else if (msg.event === 'complete' || msg.event === 'task_finished') {
+    addLog('success', '抓取完成')
+    isRunning.value = false
+  }
 })
 
 function formatTime() {
