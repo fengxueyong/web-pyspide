@@ -34,3 +34,7 @@ INF.md
 CLAUDE.md
 INF-RES.md
 INF-TASK.md
+
+# Claude Code local settings (contains tokens/keys)
+.claude/settings.local.json
+.claude/settings.json
