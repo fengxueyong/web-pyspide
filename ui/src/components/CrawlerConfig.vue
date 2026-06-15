@@ -125,8 +125,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
-import { startCrawl, fetchProxies } from '../api'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { startCrawl as apiStartCrawl, fetchProxies } from '../api'
 import { useWebSocket } from '../composables/useWebSocket'
 
 const emit = defineEmits(['crawl-started', 'resources-update'])
@@ -157,6 +157,11 @@ const selectedType = computed(() => typeOptions.find(o => o.value === resourceTy
 
 const logs = ref([])
 const logRef = ref(null)
+const crawledResources = ref([])
+
+// Current time for cursor blink
+const currentTime = ref('')
+let timeTimer = null
 
 // Auto-scroll logs
 watch(logs, () => {
@@ -167,20 +172,19 @@ watch(logs, () => {
   })
 }, { deep: true })
 
-const crawledResources = ref([])
-
 // Watch WebSocket messages
 watch(messages, (msgs) => {
   msgs.forEach(msg => {
     if (msg.event === 'resource_found') {
-      addLog('success', `[${msg.data.res_status || 200}] ${msg.data.res_link}`)
-      crawledResources.value.push(msg.data)
+      const resource = msg.data
+      addLog('success', `[${resource.res_status || 200}] ${resource.res_link}`)
+      crawledResources.value.push(resource)
       emit('resources-update', [...crawledResources.value])
     } else if (msg.event === 'error') {
-      addLog('error', msg.data)
+      addLog('error', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
     } else if (msg.event === 'info') {
-      addLog('info', msg.data)
-    } else if (msg.event === 'complete') {
+      addLog('info', typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data))
+    } else if (msg.event === 'complete' || msg.event === 'task_finished') {
       addLog('success', '抓取完成')
       isRunning.value = false
     }
@@ -197,9 +201,6 @@ function addLog(level, msg) {
   if (logs.value.length > 300) logs.value.shift()
 }
 
-const currentTime = ref('')
-let timeTimer = null
-
 function selectType(val) {
   resourceType.value = val
   typeOpen.value = false
@@ -212,14 +213,18 @@ function onDocumentClick(e) {
   }
 }
 
-async function startCrawlTask() {
+async function startCrawl() {
   const urls = url.value.trim().split('\n').map(u => u.trim()).filter(Boolean)
-  if (!urls.length) return
+  if (!urls.length) {
+    addLog('warn', '请先输入目标 URL')
+    return
+  }
 
   isRunning.value = true
   logs.value = []
   crawledResources.value = []
-  addLog('info', `初始化爬虫引擎...`)
+  emit('resources-update', [])
+  addLog('info', '初始化爬虫引擎...')
   addLog('info', `目标 URL（${urls.length} 个）：`)
   urls.forEach((u, i) => addLog('info', `  [${i + 1}] ${u}`))
   addLog('info', `资源类型：${selectedType.value.label} | 深度：${depth.value}`)
@@ -228,11 +233,11 @@ async function startCrawlTask() {
   }
 
   try {
-    const data = await startCrawl({
+    const data = await apiStartCrawl({
       website: urls[0],
       res_type: resourceType.value,
       depth: depth.value,
-      link_follow: 0,
+      link_follow: depth.value > 1 ? 1 : 0,
       save_method: 'download',
       proxy_id: useProxy.value ? -1 : -1,
     })
@@ -250,6 +255,19 @@ function stopCrawl() {
   isRunning.value = false
   addLog('warn', '■ 任务已手动停止')
 }
+
+// Update current time every second for the cursor
+function startTimeTimer() {
+  currentTime.value = formatTime()
+  timeTimer = setInterval(() => {
+    currentTime.value = formatTime()
+  }, 1000)
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+  startTimeTimer()
+})
 
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
