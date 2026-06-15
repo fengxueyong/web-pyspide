@@ -111,12 +111,10 @@
         <div v-if="logs.length === 0" class="log-empty">暂无抓取记录</div>
         <div v-for="(log, i) in logs" :key="i" class="log-entry">
           <span class="log-time">{{ log.time }}</span>
-          <span class="log-level" :class="'level-' + log.level">{{ log.level }}</span>
           <span class="log-msg">{{ log.msg }}</span>
         </div>
         <div v-if="isRunning" class="log-cursor">
           <span class="log-time">{{ currentTime }}</span>
-          <span class="log-level level-info">信息</span>
           <span class="log-msg">_</span>
         </div>
       </div>
@@ -662,17 +660,8 @@ onUnmounted(() => {
 .log-time {
   color: var(--muted-foreground);
   flex-shrink: 0;
+  min-width: 70px;
 }
-
-.log-level {
-  flex-shrink: 0;
-  width: 32px;
-}
-
-.level-info { color: var(--muted-foreground); }
-.level-success { color: var(--primary); }
-.level-warn { color: #b8860b; }
-.level-error { color: var(--destructive); }
 
 .log-msg {
   color: var(--foreground);
