@@ -1,3 +1,5 @@
+from urllib.parse import urlparse, urljoin
+
 import scrapy
 
 from web_collector.items import WebPageItem, MediaItem
@@ -35,11 +37,12 @@ class UniversalSpider(scrapy.Spider):
     def parse(self, response):
         html = response.text
         url = response.url
+        cur_depth = response.meta.get("depth", 1)
 
         # 1. 用 Scrapling 自动分类页面内容
         classifier = ContentClassifier(html, url)
         detected = classifier.classify()
-        self.logger.info(f"[{url}] 检测到: {detected}")
+        self.logger.info(f"[{url}] （深度 {cur_depth}/{self.max_depth}）检测到: {detected}")
 
         # 2. 按目标类型逐一提取
         for ctype in self.target_types:
@@ -60,6 +63,55 @@ class UniversalSpider(scrapy.Spider):
 
             if ctype == "audio":
                 yield from self._extract_audios(html, url)
+
+        # 3. 链接追踪（深度 > 1 时递归爬取同域名下的链接）
+        if cur_depth < self.max_depth:
+            yield from self._follow_links(response)
+
+    SKIP_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                        ".zip", ".rar", ".7z", ".tar", ".gz", ".mp3", ".mp4",
+                        ".avi", ".mov", ".wmv", ".jpg", ".jpeg", ".png", ".gif",
+                        ".webp", ".svg", ".ico", ".css", ".js", ".json", ".xml"}
+
+    def _follow_links(self, response):
+        """提取当前页面中指向同站点的链接并递归爬取"""
+        cur_depth = response.meta.get("depth", 1)
+        allowed_domains = self._get_allowed_domains(response)
+
+        for a in response.css("a[href]"):
+            href = a.attrib.get("href", "").strip()
+            if not href or href.startswith("#") or href.startswith("javascript:"):
+                continue
+
+            full_url = urljoin(response.url, href)
+            # 去碎片
+            full_url = full_url.split("#")[0]
+            if not full_url or not full_url.startswith("http"):
+                continue
+
+            # 跳过非目标域名
+            parsed = urlparse(full_url)
+            if parsed.netloc not in allowed_domains:
+                continue
+
+            # 跳过静态资源文件
+            path = parsed.path.lower()
+            if any(path.endswith(ext) for ext in self.SKIP_EXTENSIONS):
+                continue
+
+            yield scrapy.Request(full_url, callback=self.parse, priority=cur_depth * 10)
+
+    @staticmethod
+    def _get_allowed_domains(response):
+        """从响应 URL 提取同站点域名列表（含 www 前缀变体）"""
+        parsed = urlparse(response.url)
+        domains = {parsed.netloc}
+        hostname = parsed.hostname or ""
+        if hostname.startswith("www."):
+            domains.add(hostname[4:])
+        else:
+            domains.add(f"www.{hostname}")
+        return domains
 
     def _extract_text(self, html, url):
         data = self.text_extractor.extract(html, url)

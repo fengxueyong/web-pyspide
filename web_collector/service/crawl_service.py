@@ -114,6 +114,7 @@ class CrawlService:
             "-a", f"content_types={spider_types}",
             "-a", f"depth={depth}",
             "-a", f"task_id={task_id}",
+            "-s", f"DEPTH_LIMIT={depth}",
         ]
 
         logger.info(f"[task={task_id}] 启动爬虫: {' '.join(cmd)}")
