@@ -2,6 +2,8 @@ from urllib.parse import urlparse, urljoin
 
 import scrapy
 
+from scrapy_playwright.page import PageMethod
+
 from web_collector.items import WebPageItem, MediaItem
 from web_collector.extractors import (
     ContentClassifier, TextExtractor, ImageExtractor,
@@ -40,10 +42,20 @@ class UniversalSpider(scrapy.Spider):
         self._seen_urls = set()
 
     def start_requests(self):
+        """生成初始请求，render_js=True 时启用 Playwright 真实浏览器渲染"""
         for url in self.start_urls:
             meta = {"depth": 1}
             if self.render_js:
+                # playwright=True — 使用 Chromium 真实浏览器加载页面
+                # 对于 JS 单页应用（如花瓣网），图片等内容由 JS 动态渲染
                 meta["playwright"] = True
+                # wait_for_load_state("networkidle") — 等待网络空闲（所有异步请求完成）
+                # 默认只等 domcontentloaded，此时 JS 还没执行完
+                # networkidle 会一直等到 500ms 内没有新网络请求再返回
+                # timeout=30000 — 最多等 30 秒，超时也返回当前页面内容
+                meta["playwright_page_methods"] = [
+                    PageMethod("wait_for_load_state", "networkidle", timeout=30000),
+                ]
             yield scrapy.Request(url, callback=self.parse, meta=meta)
 
     def parse(self, response):
@@ -111,7 +123,12 @@ class UniversalSpider(scrapy.Spider):
 
             meta = {"depth": cur_depth + 1}
             if self.render_js:
+                # 跟进链接时同样启用 Playwright 渲染
                 meta["playwright"] = True
+                # 等待所有异步 JS 请求完成后再提取页面内容
+                meta["playwright_page_methods"] = [
+                    PageMethod("wait_for_load_state", "networkidle", timeout=30000),
+                ]
             yield scrapy.Request(full_url, callback=self.parse, meta=meta, priority=cur_depth * 10)
 
     @staticmethod
