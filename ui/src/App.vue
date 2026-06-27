@@ -17,12 +17,8 @@
     <div class="divider">
       <div v-if="!collapsed" class="drag-handle" @mousedown="onMouseDown"></div>
       <button class="collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? '展开配置面板' : '收起配置面板'">
-        <svg v-if="collapsed" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-        <svg v-else viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
+        <component :is="Icons.panelLeftOpen" v-if="collapsed" :size="12" />
+        <component :is="Icons.panelLeftClose" v-else :size="12" />
       </button>
     </div>
 
@@ -35,6 +31,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { Icons } from './components/Icons'
 import CrawlerConfig from './components/CrawlerConfig.vue'
 import ResourceViewer from './components/ResourceViewer.vue'
 
@@ -140,7 +137,7 @@ onUnmounted(() => {
 
 .drag-handle:hover,
 .drag-handle:active {
-  background: rgba(22, 100, 48, 0.25);
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .collapse-btn {
@@ -151,10 +148,10 @@ onUnmounted(() => {
   height: 48px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
   color: var(--muted-foreground);
   z-index: 20;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   position: relative;
   left: -1px;
 }

@@ -8,15 +8,15 @@
       </div>
       <div class="header-stats">
         <span class="stat-item">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          <component :is="Icons.database" :size="11" />
           {{ resources.length }} 条
         </span>
         <span class="stat-item stat-ok">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <component :is="Icons.checkCircle" :size="11" />
           {{ stats.ok }} 成功
         </span>
         <span class="stat-item stat-err">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <component :is="Icons.alertCircle" :size="11" />
           {{ stats.err }} 失败
         </span>
       </div>
@@ -25,12 +25,12 @@
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn" :class="{ active: activeTab === 'live' }" @click="activeTab = 'live'">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <component :is="Icons.activity" :size="12" />
         实时抓取
         <span v-if="resources.length > 0" class="tab-badge">{{ resources.length }}</span>
       </button>
       <button class="tab-btn" :class="{ active: activeTab === 'query' }" @click="switchToQuery">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <component :is="Icons.search" :size="12" />
         资源查询
       </button>
     </div>
@@ -51,6 +51,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { Icons } from './Icons'
 import LiveTab from './LiveTab.vue'
 import QueryTab from './QueryTab.vue'
 
@@ -151,6 +152,7 @@ function switchToQuery() {
   font-size: 12px;
   font-family: inherit;
   transition: all 0.15s;
+  cursor: pointer;
 }
 
 .tab-btn:hover {
@@ -165,7 +167,7 @@ function switchToQuery() {
 
 .tab-badge {
   padding: 1px 6px;
-  background: rgba(22, 100, 48, 0.12);
+  background: rgba(99, 102, 241, 0.12);
   color: var(--primary);
   border-radius: 8px;
   font-size: 11px;

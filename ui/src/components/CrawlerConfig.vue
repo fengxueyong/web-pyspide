@@ -10,7 +10,7 @@
     <div class="field">
       <label class="field-label">
         目标 URL
-        <span class="field-hint">（每行一个）</span>
+        <span class="field-hint">（每行一个，支持长 URL 自动换行）</span>
       </label>
       <textarea
         v-model="url"
@@ -27,8 +27,9 @@
         <label class="field-label">资源类型</label>
         <div class="custom-select" ref="typeSelectRef">
           <button class="select-trigger" :disabled="isRunning" @click="typeOpen = !typeOpen">
+            <span class="select-icon"><component :is="selectedType.icon" :size="13" /></span>
             <span class="select-value">{{ selectedType.label }}</span>
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="chevron"><polyline points="6 9 12 15 18 9" /></svg>
+            <component :is="Icons.chevronDown" :size="13" class="chevron" :class="{ rotated: typeOpen }" />
           </button>
           <div v-if="typeOpen" class="select-dropdown">
             <button
@@ -37,7 +38,10 @@
               class="select-option"
               :class="{ active: resourceType === opt.value }"
               @click="selectType(opt.value)"
-            >{{ opt.label }}</button>
+            >
+              <span class="select-icon"><component :is="opt.icon" :size="13" /></span>
+              {{ opt.label }}
+            </button>
           </div>
         </div>
       </div>
@@ -49,7 +53,7 @@
             <option :value="2">深度 2</option>
             <option :value="3">深度 3</option>
           </select>
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="chevron"><polyline points="6 9 12 15 18 9" /></svg>
+          <component :is="Icons.chevronDown" :size="13" class="chevron" />
         </div>
       </div>
     </div>
@@ -58,7 +62,7 @@
     <div class="proxy-section">
       <div class="proxy-header">
         <div class="proxy-header-left">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <component :is="Icons.shield" :size="13" />
           <span class="field-label">代理设置</span>
         </div>
         <button
@@ -67,8 +71,7 @@
           :disabled="isRunning"
           @click="useProxy = !useProxy"
         >
-          <svg v-if="useProxy" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13a4 4 0 0 1 0-8 4 4 0 0 1 0 8z"/><line x1="7" y1="8" x2="11" y2="8"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 7a5 5 0 0 1 5 5"/></svg>
-          <svg v-else viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M5 13a4 4 0 0 1 0-8 4 4 0 0 1 0 8z"/><line x1="7" y1="8" x2="11" y2="8"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 7a5 5 0 0 1 5 5"/></svg>
+          <component :is="useProxy ? Icons.wifi : Icons.wifiOff" :size="11" />
           {{ useProxy ? '已启用' : '已禁用' }}
         </button>
       </div>
@@ -79,11 +82,11 @@
         </div>
         <div class="flex-row">
           <div class="input-with-icon flex-1">
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <component :is="Icons.user" :size="11" />
             <input v-model="proxyUser" class="proxy-input" placeholder="用户名（可选）" :disabled="isRunning" />
           </div>
           <div class="input-with-icon flex-1">
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <component :is="Icons.lock" :size="11" />
             <input v-model="proxyPass" class="proxy-input" type="password" placeholder="密码（可选）" :disabled="isRunning" />
           </div>
         </div>
@@ -96,8 +99,7 @@
       :class="{ running: isRunning }"
       @click="isRunning ? stopCrawl() : startCrawl()"
     >
-      <svg v-if="isRunning" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="4" height="4"/><rect x="14" y="6" width="4" height="4"/><rect x="6" y="14" width="4" height="4"/><rect x="14" y="14" width="4" height="4"/></svg>
-      <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <component :is="isRunning ? Icons.square : Icons.play" :size="14" />
       {{ isRunning ? '停止抓取' : '开始抓取' }}
     </button>
 
@@ -111,11 +113,13 @@
         <div v-if="logs.length === 0" class="log-empty">暂无抓取记录</div>
         <div v-for="(log, i) in logs" :key="i" class="log-entry">
           <span class="log-time">{{ log.time }}</span>
+          <span class="log-level" :class="'level-' + log.level">{{ levelLabel(log.level) }}</span>
           <span class="log-msg">{{ log.msg }}</span>
         </div>
         <div v-if="isRunning" class="log-cursor">
           <span class="log-time">{{ currentTime }}</span>
-          <span class="log-msg">_</span>
+          <span class="log-level level-info">信息</span>
+          <span class="log-msg cursor-blink">_</span>
         </div>
       </div>
     </div>
@@ -124,7 +128,8 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { startCrawl as apiStartCrawl, fetchProxies } from '../api'
+import { Icons } from './Icons'
+import { startCrawl as apiStartCrawl } from '../api'
 import { useWebSocket } from '../composables/useWebSocket'
 
 const emit = defineEmits(['crawl-started', 'resources-update'])
@@ -145,10 +150,10 @@ const typeOpen = ref(false)
 const typeSelectRef = ref(null)
 
 const typeOptions = [
-  { value: 'all', label: '全部类型' },
-  { value: 'image', label: '图片' },
-  { value: 'video', label: '视频' },
-  { value: 'doc', label: '文档' },
+  { value: 'all', label: '全部类型', icon: Icons.layers },
+  { value: 'image', label: '图片', icon: Icons.image },
+  { value: 'video', label: '视频', icon: Icons.video },
+  { value: 'doc', label: '文档', icon: Icons.download },
 ]
 
 const selectedType = computed(() => typeOptions.find(o => o.value === resourceType.value) || typeOptions[0])
@@ -170,7 +175,7 @@ watch(logs, () => {
   })
 }, { deep: true })
 
-// Watch WebSocket messages (single message at a time via lastMessage)
+// Watch WebSocket messages
 watch(lastMessage, (msg) => {
   if (!msg) return
   if (msg.event === 'resource_found') {
@@ -191,6 +196,11 @@ watch(lastMessage, (msg) => {
 function formatTime() {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+}
+
+function levelLabel(level) {
+  const map = { success: '成功', error: '错误', warn: '警告', info: '信息' }
+  return map[level] || level
 }
 
 function addLog(level, msg) {
@@ -344,7 +354,7 @@ onUnmounted(() => {
   outline: none;
   resize: vertical;
   line-height: 1.6;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   word-break: break-all;
   overflow-wrap: break-word;
   white-space: pre-wrap;
@@ -352,6 +362,7 @@ onUnmounted(() => {
 
 .url-input:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .url-input:disabled {
@@ -383,7 +394,7 @@ onUnmounted(() => {
   color: var(--foreground);
   font-size: 12px;
   font-family: inherit;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .select-trigger:hover:not(:disabled) {
@@ -395,6 +406,12 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.select-icon {
+  display: flex;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
 .select-value {
   flex: 1;
   text-align: left;
@@ -403,6 +420,11 @@ onUnmounted(() => {
 .chevron {
   color: var(--muted-foreground);
   flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
 }
 
 .select-dropdown {
@@ -414,12 +436,15 @@ onUnmounted(() => {
   background: var(--popover);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
 .select-option {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   text-align: left;
   font-size: 12px;
@@ -436,7 +461,7 @@ onUnmounted(() => {
 
 .select-option.active {
   color: var(--primary);
-  background: var(--muted);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .native-select {
@@ -457,6 +482,7 @@ onUnmounted(() => {
 
 .native-select:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .native-select:disabled {
@@ -543,11 +569,12 @@ onUnmounted(() => {
   font-size: 12px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .proxy-input:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .proxy-input:disabled {
@@ -568,11 +595,12 @@ onUnmounted(() => {
   border-radius: var(--radius);
   background: var(--card);
   color: var(--muted-foreground);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .input-with-icon:focus-within {
   border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .input-with-icon .proxy-input {
@@ -592,7 +620,7 @@ onUnmounted(() => {
   border-radius: var(--radius);
   font-size: 13px;
   font-family: inherit;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   font-weight: 600;
   transition: all 0.15s;
   background: var(--primary);
@@ -600,7 +628,7 @@ onUnmounted(() => {
 }
 
 .action-btn:hover {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .action-btn.running {
@@ -655,12 +683,44 @@ onUnmounted(() => {
 .log-entry {
   display: flex;
   gap: 8px;
+  align-items: baseline;
 }
 
 .log-time {
   color: var(--muted-foreground);
   flex-shrink: 0;
-  min-width: 70px;
+  min-width: 65px;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-level {
+  flex-shrink: 0;
+  min-width: 32px;
+  font-size: 11px;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.level-success {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+}
+
+.level-error {
+  color: var(--destructive);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.level-warn {
+  color: #ca8a04;
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.level-info {
+  color: var(--muted-foreground);
+  background: rgba(100, 116, 139, 0.1);
 }
 
 .log-msg {
@@ -673,9 +733,10 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   margin-top: 2px;
+  align-items: baseline;
 }
 
-.log-cursor .log-msg {
+.cursor-blink {
   animation: blink 1s infinite;
 }
 
