@@ -55,6 +55,8 @@ class UniversalSpider(scrapy.Spider):
                 # timeout=30000 — 最多等 30 秒，超时也返回当前页面内容
                 meta["playwright_page_methods"] = [
                     PageMethod("wait_for_load_state", "networkidle", timeout=30000),
+                    # 额外等 2 秒确保页面渲染完成
+                    PageMethod("wait_for_timeout", 2000),
                 ]
             yield scrapy.Request(url, callback=self.parse, meta=meta)
 
@@ -67,6 +69,26 @@ class UniversalSpider(scrapy.Spider):
         classifier = ContentClassifier(html, url)
         detected = classifier.classify()
         self.logger.info(f"[{url}] （深度 {cur_depth}/{self.max_depth}）检测到: {detected}")
+
+        # 调试：当 Playwright 启用但没检测到图片时，查看页面关键信息
+        if self.render_js and "image" not in detected and "gallery" not in detected:
+            img_count = html.count("<img")
+            hbimg_count = html.count("hbimg")
+            script_count = html.count("<script")
+            self.logger.warning(
+                f"[{url}] Playwright 渲染后仍无图片: "
+                f"<img>={img_count}, hbimg引用={hbimg_count}, "
+                f"<script>={script_count}, HTML大小={len(html)}B"
+            )
+            # 检查是否包含 cloudflare/challenge 等关键词
+            if any(kw in html.lower() for kw in ("challenge", "captcha", "cf-browser-verification")):
+                self.logger.warning(f"[{url}] ⚠ 页面触发了反爬验证（Cloudflare/Challenge）")
+            # 截取页面中第一个 script 标签片段看数据
+            import re
+            scripts = re.findall(r'<script[^>]*>([^<]+)</script>', html[:50000])
+            for sc in scripts[:3]:
+                if "pin" in sc.lower() or "image" in sc.lower() or "file" in sc.lower():
+                    self.logger.info(f"[{url}] 数据 script 片段: {sc[:300]}")
 
         # 2. 按目标类型逐一提取
         for ctype in self.target_types:
@@ -127,7 +149,10 @@ class UniversalSpider(scrapy.Spider):
                 meta["playwright"] = True
                 # 等待所有异步 JS 请求完成后再提取页面内容
                 meta["playwright_page_methods"] = [
+                    # 等待网络空闲（所有异步 JS 请求完成），最多等 30 秒
                     PageMethod("wait_for_load_state", "networkidle", timeout=30000),
+                    # 额外等 2 秒让页面渲染稳定
+                    PageMethod("wait_for_timeout", 2000),
                 ]
             yield scrapy.Request(full_url, callback=self.parse, meta=meta, priority=cur_depth * 10)
 
