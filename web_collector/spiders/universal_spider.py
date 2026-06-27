@@ -8,6 +8,7 @@ from web_collector.items import WebPageItem, MediaItem
 from web_collector.extractors import (
     ContentClassifier, TextExtractor, ImageExtractor,
     NewsExtractor, DocExtractor, VideoExtractor,
+    HuabanExtractor,
 )
 
 
@@ -37,6 +38,9 @@ class UniversalSpider(scrapy.Spider):
         self.news_extractor = NewsExtractor()
         self.doc_extractor = DocExtractor()
         self.video_extractor = VideoExtractor()
+        # 花瓣网专用提取器（绕过 Cloudflare 反爬）
+        # 仅在 URL 匹配 huaban.com 时使用，不影响其他网站
+        self.huaban_extractor = HuabanExtractor()
 
         # 全局 URL 去重（同一次爬取中相同链接只处理一次）
         self._seen_urls = set()
@@ -65,30 +69,22 @@ class UniversalSpider(scrapy.Spider):
         url = response.url
         cur_depth = response.meta.get("depth", 1)
 
+        # ── 站点专用提取器（优先于通用流程） ──
+        # 仅在目标类型包含 image 时走专用提取
+        if "image" in self.target_types and self.huaban_extractor.is_huaban_url(url):
+            # 花瓣网使用 Cloudflare 反爬 + JS 渲染，Playwright 无法获取真实内容
+            # HuabanExtractor 使用 cloudscraper 直接绕过 Cloudflare 提取图片
+            self.logger.info(f"[{url}] 使用 HuabanExtractor 专用提取")
+            items = self.huaban_extractor.extract(url)
+            for item in items:
+                if self._dedup_url(item["url"]):
+                    yield item
+            return  # ← 直接返回，不走通用流程
+
         # 1. 用 Scrapling 自动分类页面内容
         classifier = ContentClassifier(html, url)
         detected = classifier.classify()
         self.logger.info(f"[{url}] （深度 {cur_depth}/{self.max_depth}）检测到: {detected}")
-
-        # 调试：当 Playwright 启用但没检测到图片时，查看页面关键信息
-        if self.render_js and "image" not in detected and "gallery" not in detected:
-            img_count = html.count("<img")
-            hbimg_count = html.count("hbimg")
-            script_count = html.count("<script")
-            self.logger.warning(
-                f"[{url}] Playwright 渲染后仍无图片: "
-                f"<img>={img_count}, hbimg引用={hbimg_count}, "
-                f"<script>={script_count}, HTML大小={len(html)}B"
-            )
-            # 检查是否包含 cloudflare/challenge 等关键词
-            if any(kw in html.lower() for kw in ("challenge", "captcha", "cf-browser-verification")):
-                self.logger.warning(f"[{url}] ⚠ 页面触发了反爬验证（Cloudflare/Challenge）")
-            # 截取页面中第一个 script 标签片段看数据
-            import re
-            scripts = re.findall(r'<script[^>]*>([^<]+)</script>', html[:50000])
-            for sc in scripts[:3]:
-                if "pin" in sc.lower() or "image" in sc.lower() or "file" in sc.lower():
-                    self.logger.info(f"[{url}] 数据 script 片段: {sc[:300]}")
 
         # 2. 按目标类型逐一提取
         for ctype in self.target_types:

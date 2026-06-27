@@ -4,6 +4,7 @@ from .image import ImageExtractor
 from .news import NewsExtractor
 from .doc import DocExtractor
 from .video import VideoExtractor
+from .huaban import HuabanExtractor
 
 __all__ = [
     "ContentClassifier",
@@ -12,4 +13,5 @@ __all__ = [
     "NewsExtractor",
     "DocExtractor",
     "VideoExtractor",
+    "HuabanExtractor",
 ]
