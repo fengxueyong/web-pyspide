@@ -6,14 +6,17 @@ import { h } from 'vue'
  */
 
 function icon(paths) {
+  const attrRe = /(\w+)=["']([^"']*)["']/g
   const children = paths.map(p => {
-    const [tag, ...attrs] = p.split(/\s+/)
-    const obj = {}
-    attrs.forEach(a => {
-      const [k, v] = a.split('=')
-      obj[k] = v ? v.replace(/['"]/g, '') : ''
-    })
-    return { tag, attrs: obj }
+    const spaceIdx = p.indexOf(' ')
+    const tag = spaceIdx === -1 ? p : p.slice(0, spaceIdx)
+    const attrsStr = spaceIdx === -1 ? '' : p.slice(spaceIdx + 1)
+    const attrs = {}
+    let m
+    while ((m = attrRe.exec(attrsStr)) !== null) {
+      attrs[m[1]] = m[2]
+    }
+    return { tag, attrs }
   })
   return {
     render() {
