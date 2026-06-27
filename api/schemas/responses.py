@@ -61,6 +61,7 @@ class CrawlRequest(BaseModel):
     link_follow: bool = False
     save_method: str = "download"
     proxy_id: int = Field(default=-1, description="代理配置ID，-1表示不走代理")
+    render_js: bool = Field(default=True, description="是否使用 Playwright 渲染 JS 页面")
 
 
 class CrawlResponse(BaseModel):

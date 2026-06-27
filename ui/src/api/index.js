@@ -18,8 +18,8 @@ http.interceptors.response.use(
   }
 )
 
-export function startCrawl({ website, res_type, depth, link_follow, save_method, proxy_id = -1 }) {
-  return http.post('/crawl', { website, res_type, depth, link_follow, save_method, proxy_id })
+export function startCrawl({ website, res_type, depth, link_follow, save_method, proxy_id = -1, render_js = true }) {
+  return http.post('/crawl', { website, res_type, depth, link_follow, save_method, proxy_id, render_js })
 }
 
 export function fetchResources({ page = 1, page_size = 20, website = '', res_type = 'all', min_time, max_time } = {}) {

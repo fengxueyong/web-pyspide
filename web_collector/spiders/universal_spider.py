@@ -14,18 +14,21 @@ class UniversalSpider(scrapy.Spider):
 
     name = "universal"
 
-    def __init__(self, urls="", content_types="text", depth=1, task_id=None, *args, **kwargs):
+    def __init__(self, urls="", content_types="text", depth=1, task_id=None,
+                 render_js="true", *args, **kwargs):
         """
         urls:          逗号分隔的 URL 列表
         content_types: 逗号分隔的目标内容类型 (text,image,news,video)
         depth:         爬取深度（1=仅当前页）
         task_id:       关联的 MySQL 抓取任务 ID（由 CrawlService 传入）
+        render_js:     是否启用 Playwright JS 渲染（true/false）
         """
         super().__init__(*args, **kwargs)
         self.start_urls = [u.strip() for u in urls.split(",") if u.strip()]
         self.target_types = [t.strip() for t in content_types.split(",") if t.strip()]
         self.max_depth = int(depth)
         self.task_id = int(task_id) if task_id else None
+        self.render_js = render_js.strip().lower() == "true"
 
         self.text_extractor = TextExtractor()
         self.image_extractor = ImageExtractor()
@@ -35,6 +38,13 @@ class UniversalSpider(scrapy.Spider):
 
         # 全局 URL 去重（同一次爬取中相同链接只处理一次）
         self._seen_urls = set()
+
+    def start_requests(self):
+        for url in self.start_urls:
+            meta = {"depth": 1}
+            if self.render_js:
+                meta["playwright"] = True
+            yield scrapy.Request(url, callback=self.parse, meta=meta)
 
     def parse(self, response):
         html = response.text
@@ -99,7 +109,10 @@ class UniversalSpider(scrapy.Spider):
             if any(path.endswith(ext) for ext in self.SKIP_EXTENSIONS):
                 continue
 
-            yield scrapy.Request(full_url, callback=self.parse, priority=cur_depth * 10)
+            meta = {"depth": cur_depth + 1}
+            if self.render_js:
+                meta["playwright"] = True
+            yield scrapy.Request(full_url, callback=self.parse, meta=meta, priority=cur_depth * 10)
 
     @staticmethod
     def _get_allowed_domains(response):

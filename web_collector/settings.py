@@ -13,6 +13,18 @@ CONCURRENT_REQUESTS = 4
 DOWNLOAD_DELAY = 1.0
 COOKIES_ENABLED = True
 
+DOWNLOAD_HANDLERS = {
+    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+}
+
+TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
+
+PLAYWRIGHT_BROWSER_TYPE = "chromium"
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": True,
+}
+
 DOWNLOADER_MIDDLEWARES = {
     "web_collector.middlewares.ProxyMiddleware": 100,
 }

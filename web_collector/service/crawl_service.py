@@ -31,7 +31,8 @@ class CrawlService:
 
     def create_and_start(self, website: str, res_type: str,
                          depth: int, link_follow: bool,
-                         save_method: str, proxy_id: int = -1) -> int:
+                         save_method: str, proxy_id: int = -1,
+                         render_js: bool = True) -> int:
         """
         创建抓取任务并启动后台爬取，返回 task_id。
         事务：写入 t_scrap_task
@@ -57,14 +58,15 @@ class CrawlService:
 
         thread = threading.Thread(
             target=self._run_crawl,
-            args=(task_id, website, res_type, depth, proxy_id),
+            args=(task_id, website, res_type, depth, proxy_id, render_js),
             daemon=True,
         )
         thread.start()
         return task_id
 
     def _run_crawl(self, task_id: int, website: str,
-                   res_type: str, depth: int, proxy_id: int = -1):
+                   res_type: str, depth: int, proxy_id: int = -1,
+                   render_js: bool = True):
         # 转换资源类型为蜘蛛识别的 content_types
         spider_types = RES_TYPE_MAP.get(res_type, "")
         if not spider_types:
@@ -112,6 +114,7 @@ class CrawlService:
             "-a", f"content_types={spider_types}",
             "-a", f"depth={depth}",
             "-a", f"task_id={task_id}",
+            "-a", f"render_js={str(render_js).lower()}",
             "-s", f"DEPTH_LIMIT={depth}",
         ]
 
