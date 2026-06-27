@@ -14,7 +14,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 安装 Chromium 浏览器（供 scrapy-playwright 使用）
-ENV PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright/
 RUN python -m playwright install chromium && \
     python -m playwright install-deps chromium
 
