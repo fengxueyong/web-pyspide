@@ -5,7 +5,10 @@
 但花瓣网的内部 API 接口（api.huaban.com）没有 Cloudflare 防护，
 可以直接返回包含图片地址的 JSON 数据。
 
-该提取器解析花瓣 URL 中的 pin_id，直接调用内部 API 获取图片信息。
+该提取器支持两种 URL 格式：
+  - 单图: https://huaban.com/pins/{pin_id}
+  - 画板: https://huaban.com/boards/{board_id}  （含多张图片）
+
 仅适用于 huaban.com 域名，不干扰通用提取流程。
 """
 
@@ -41,96 +44,132 @@ class HuabanExtractor:
         """
         提取花瓣网页面的图片。
 
-        从 URL 中提取 pin_id，调用花瓣内部 API 获取 JSON 数据，
-        从中提取图片信息，无需渲染页面或绕过 Cloudflare。
+        自动识别 URL 类型：
+        - /pins/{id}  → 单张图片
+        - /boards/{id} → 画板中所有图片（最多 30 张）
 
         参数:
-            url: 花瓣网采集页面 URL（如 https://huaban.com/pins/3071148217）
+            url: 花瓣网 URL
 
         返回:
             MediaItem 列表
         """
-        # 1. 从 URL 中提取 pin_id
+        # 识别 URL 类型并获取对应数据
         pin_id = self._extract_pin_id(url)
-        if not pin_id:
-            logger.error(f"[HuabanExtractor] 无法从 URL 提取 pin_id: {url}")
+        board_id = self._extract_board_id(url)
+
+        if pin_id:
+            # 单图模式：调用单图 API
+            return self._extract_single_pin(pin_id, url)
+        elif board_id:
+            # 画板模式：调用画板 API 获取多张图片
+            return self._extract_board_pins(board_id, url)
+        else:
+            logger.error(f"[HuabanExtractor] 无法识别的 URL 格式: {url}")
             return []
 
-        # 2. 调用花瓣内部 API 获取图片数据
-        # 此接口没有 Cloudflare 防护，普通 requests 即可访问
+    def _extract_single_pin(self, pin_id: str, source_url: str) -> list[MediaItem]:
+        """从单图 API 提取图片"""
         api_url = f"https://api.huaban.com/pins/{pin_id}?format=json"
         try:
             resp = self.session.get(api_url, timeout=15)
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
-            logger.error(f"[HuabanExtractor] API 请求失败: {api_url} — {e}")
+            logger.error(f"[HuabanExtractor] 单图 API 请求失败: {api_url} — {e}")
             return []
 
-        # 3. 解析 JSON，提取图片 URL
         pin = data.get("pin") or data
         if not pin:
-            logger.warning(f"[HuabanExtractor] API 返回数据中无 pin 字段: {url}")
             return []
 
-        file_info = pin.get("file")
-        if not file_info:
-            logger.warning(f"[HuabanExtractor] API 返回数据中无 file 字段: {url}")
-            return []
-
+        file_info = pin.get("file") or {}
         image_url = file_info.get("url", "")
         if not image_url:
-            logger.warning(f"[HuabanExtractor] file 中无 url 字段: {url}")
             return []
 
-        # 4. 构造 MediaItem
+        item = self._build_media_item(image_url, source_url, pin.get("file", {}),
+                                      pin.get("raw_text", ""), pin_id)
+        logger.info(f"[HuabanExtractor] {source_url} — 提取到 1 张图片")
+        return [item]
+
+    def _extract_board_pins(self, board_id: str, source_url: str) -> list[MediaItem]:
+        """从画板 API 提取所有图片"""
+        api_url = f"https://api.huaban.com/boards/{board_id}/pins"
+        try:
+            resp = self.session.get(api_url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"[HuabanExtractor] 画板 API 请求失败: {api_url} — {e}")
+            return []
+
+        pins = data.get("pins") or []
+        if not pins:
+            logger.warning(f"[HuabanExtractor] 画板无数据: {source_url}")
+            return []
+
+        results = []
+        for pin in pins:
+            file_info = pin.get("file") or {}
+            image_url = file_info.get("url", "")
+            if not image_url:
+                continue
+
+            item = self._build_media_item(
+                image_url, source_url, file_info,
+                pin.get("raw_text", ""),
+                str(pin.get("pin_id", ""))
+            )
+            results.append(item)
+
+        logger.info(f"[HuabanExtractor] {source_url} — 提取到 {len(results)} 张图片")
+        return results
+
+    @staticmethod
+    def _build_media_item(image_url: str, source_url: str,
+                          file_info: dict, alt_text: str,
+                          pin_id: str) -> MediaItem:
+        """根据图片信息构造 MediaItem"""
         image_id = hashlib.md5(image_url.encode()).hexdigest()[:16]
         width = file_info.get("width", 0)
         height = file_info.get("height", 0)
         mime_type = file_info.get("type", "image/jpeg")
         ext = mime_type.split("/")[-1] if "/" in mime_type else "jpg"
 
-        item = MediaItem(
+        return MediaItem(
             url=image_url,
-            source_page=url,
+            source_page=source_url,
             media_type="image",
             filename=f"{image_id}.{ext}",
             mime_type=mime_type,
             metadata={
-                "alt": pin.get("raw_text", ""),
+                "alt": alt_text,
                 "width": str(width),
                 "height": str(height),
                 "width_int": width,
                 "height_int": height,
                 "ext": ext,
                 "pin_id": pin_id,
-                "board_id": pin.get("board_id", ""),
                 "source": "huaban",
             },
         )
 
-        logger.info(
-            f"[HuabanExtractor] {url} — 提取到 1 张图片: "
-            f"{width}x{height} {mime_type}"
-        )
-        return [item]
-
     @staticmethod
     def _extract_pin_id(url: str) -> str | None:
-        """
-        从花瓣 URL 中提取 pin_id。
-
-        支持的 URL 格式:
-        - https://huaban.com/pins/3071148217
-        - https://huaban.com/pins/3071148217/
-        - https://www.huaban.com/pins/3071148217
-        """
+        """从 URL 提取 pin_id（单图），匹配 /pins/<数字>"""
         try:
-            # 匹配 URL 路径中的 /pins/<数字>
             match = re.search(r"/pins/(\d+)", urlparse(url).path)
-            if match:
-                return match.group(1)
+            return match.group(1) if match else None
+        except Exception:
             return None
+
+    @staticmethod
+    def _extract_board_id(url: str) -> str | None:
+        """从 URL 提取 board_id（画板），匹配 /boards/<数字>"""
+        try:
+            match = re.search(r"/boards/(\d+)", urlparse(url).path)
+            return match.group(1) if match else None
         except Exception:
             return None
 
