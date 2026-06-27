@@ -1,19 +1,20 @@
 """
 花瓣网（huaban.com）专用图片提取器。
 
-花瓣网使用了 Cloudflare 反爬 + JS 动态渲染，
-通用爬虫的 Scrapling/Playwright 方式难以获取真实内容。
+花瓣网使用了 Cloudflare 反爬 + JS 动态渲染，通用爬虫难以获取真实页面。
+但花瓣网的内部 API 接口（api.huaban.com）没有 Cloudflare 防护，
+可以直接返回包含图片地址的 JSON 数据。
 
-该提取器使用 cloudscraper（绕过 Cloudflare）
-直接请求花瓣页面，拿到真实 HTML 后提取图片 URL。
+该提取器解析花瓣 URL 中的 pin_id，直接调用内部 API 获取图片信息。
 仅适用于 huaban.com 域名，不干扰通用提取流程。
 """
 
 import hashlib
 import logging
-from urllib.parse import urljoin
+import re
+from urllib.parse import urlparse
 
-import cloudscraper
+import requests
 
 from web_collector.items import MediaItem
 
@@ -21,118 +22,123 @@ logger = logging.getLogger(__name__)
 
 
 class HuabanExtractor:
-    """花瓣网图片提取器，专用于 huaban.com 域名"""
-
-    # 花瓣网 CDN 域名前缀，用于过滤非图片资源
-    IMAGE_DOMAINS = (
-        "gd-hbimg-edge.huaban.com",
-        "gd-hbimg.huaban.com",
-        "img.hbimg.com",
-    )
+    """花瓣网图片提取器，通过内部 API 获取图片，专用于 huaban.com 域名"""
 
     def __init__(self):
-        # cloudscraper：绕过 Cloudflare 验证的 HTTP 客户端
-        # 模拟真实浏览器指纹，自动处理 Cloudflare 的 JS 挑战
-        self.scraper = cloudscraper.create_scraper(
-            browser={
-                "browser": "chrome",
-                "platform": "windows",
-                "mobile": False,
-            }
-        )
+        # 普通 HTTP 会话即可，花瓣内部 API 没有 Cloudflare 防护
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json",
+            "Referer": "https://huaban.com/",
+        })
 
     def extract(self, url: str) -> list[MediaItem]:
         """
-        提取花瓣网页面中的所有图片。
+        提取花瓣网页面的图片。
+
+        从 URL 中提取 pin_id，调用花瓣内部 API 获取 JSON 数据，
+        从中提取图片信息，无需渲染页面或绕过 Cloudflare。
 
         参数:
-            url: 花瓣网画板/采集页面 URL（如 https://huaban.com/pins/3071148217）
+            url: 花瓣网采集页面 URL（如 https://huaban.com/pins/3071148217）
 
         返回:
-            MediaItem 列表，每条包含图片 URL、类型等元数据
+            MediaItem 列表
         """
-        try:
-            # 请求页面，cloudscraper 会自动处理 Cloudflare 验证
-            resp = self.scraper.get(url, timeout=30)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"[HuabanExtractor] 请求失败: {url} — {e}")
+        # 1. 从 URL 中提取 pin_id
+        pin_id = self._extract_pin_id(url)
+        if not pin_id:
+            logger.error(f"[HuabanExtractor] 无法从 URL 提取 pin_id: {url}")
             return []
 
-        html = resp.text
-        results = []
-        seen = set()
+        # 2. 调用花瓣内部 API 获取图片数据
+        # 此接口没有 Cloudflare 防护，普通 requests 即可访问
+        api_url = f"https://api.huaban.com/pins/{pin_id}?format=json"
+        try:
+            resp = self.session.get(api_url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"[HuabanExtractor] API 请求失败: {api_url} — {e}")
+            return []
 
-        # 从 HTML 中提取所有 <img> 标签
-        # 花瓣网的图片使用 class="hb-image" 或普通 <img>
-        from scrapling import Selector
-        page = Selector(content=html, url=url)
+        # 3. 解析 JSON，提取图片 URL
+        pin = data.get("pin") or data
+        if not pin:
+            logger.warning(f"[HuabanExtractor] API 返回数据中无 pin 字段: {url}")
+            return []
 
-        for img in page.css("img[src]"):
-            # 优先使用 data-src（懒加载图片），降级到 src
-            src = (
-                img.attrib.get("lazysrc")
-                or img.attrib.get("data-src")
-                or img.attrib.get("data-original")
-                or img.attrib.get("src")
-                or ""
-            )
+        file_info = pin.get("file")
+        if not file_info:
+            logger.warning(f"[HuabanExtractor] API 返回数据中无 file 字段: {url}")
+            return []
 
-            # 过滤掉 base64 内联图片
-            if not src or src.startswith("data:") or src.startswith("blob:"):
-                continue
+        image_url = file_info.get("url", "")
+        if not image_url:
+            logger.warning(f"[HuabanExtractor] file 中无 url 字段: {url}")
+            return []
 
-            # 转为绝对 URL
-            full_url = urljoin(url, src)
+        # 4. 构造 MediaItem
+        image_id = hashlib.md5(image_url.encode()).hexdigest()[:16]
+        width = file_info.get("width", 0)
+        height = file_info.get("height", 0)
+        mime_type = file_info.get("type", "image/jpeg")
+        ext = mime_type.split("/")[-1] if "/" in mime_type else "jpg"
 
-            # 去重
-            if full_url in seen:
-                continue
-            seen.add(full_url)
-
-            # 提取文件扩展名
-            ext = ""
-            if "." in full_url:
-                ext = full_url.rsplit(".", 1)[-1].split("?")[0].lower()
-
-            # 生成唯一 ID
-            image_id = hashlib.md5(full_url.encode()).hexdigest()[:16]
-
-            results.append(MediaItem(
-                url=full_url,
-                source_page=url,
-                media_type="image",
-                filename=f"{image_id}.{ext}" if ext else image_id,
-                mime_type=f"image/{ext}" if ext else "image/jpeg",
-                metadata={
-                    "alt": img.attrib.get("alt", ""),
-                    "width": img.attrib.get("width", ""),
-                    "height": img.attrib.get("height", ""),
-                    "width_int": _safe_int(img.attrib.get("width", 0)),
-                    "height_int": _safe_int(img.attrib.get("height", 0)),
-                    "ext": ext,
-                    "source": "huaban",
-                },
-            ))
+        item = MediaItem(
+            url=image_url,
+            source_page=url,
+            media_type="image",
+            filename=f"{image_id}.{ext}",
+            mime_type=mime_type,
+            metadata={
+                "alt": pin.get("raw_text", ""),
+                "width": str(width),
+                "height": str(height),
+                "width_int": width,
+                "height_int": height,
+                "ext": ext,
+                "pin_id": pin_id,
+                "board_id": pin.get("board_id", ""),
+                "source": "huaban",
+            },
+        )
 
         logger.info(
-            f"[HuabanExtractor] {url} — 提取到 {len(results)} 张图片"
+            f"[HuabanExtractor] {url} — 提取到 1 张图片: "
+            f"{width}x{height} {mime_type}"
         )
-        return results
+        return [item]
 
-    def is_huaban_url(self, url: str) -> bool:
+    @staticmethod
+    def _extract_pin_id(url: str) -> str | None:
+        """
+        从花瓣 URL 中提取 pin_id。
+
+        支持的 URL 格式:
+        - https://huaban.com/pins/3071148217
+        - https://huaban.com/pins/3071148217/
+        - https://www.huaban.com/pins/3071148217
+        """
+        try:
+            # 匹配 URL 路径中的 /pins/<数字>
+            match = re.search(r"/pins/(\d+)", urlparse(url).path)
+            if match:
+                return match.group(1)
+            return None
+        except Exception:
+            return None
+
+    @staticmethod
+    def is_huaban_url(url: str) -> bool:
         """判断 URL 是否属于花瓣网"""
-        from urllib.parse import urlparse
         try:
             netloc = urlparse(url).netloc.lower()
             return netloc.endswith("huaban.com") or netloc.endswith("huaban.com.cn")
         except Exception:
             return False
-
-
-def _safe_int(val) -> int:
-    """安全转整数，失败返回 0"""
-    try:
-        return int(val)
-    except (ValueError, TypeError):
-        return 0
