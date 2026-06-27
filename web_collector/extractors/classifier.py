@@ -48,10 +48,6 @@ class ContentClassifier:
         if any(self.page.css(sel) for sel in video_selectors):
             types.add("video")
 
-        # -- 音频 --
-        if self.page.css('audio[src]'):
-            types.add("audio")
-
         # -- 新闻/文章 --
         for sel in self.NEWS_SELECTORS:
             el = _first(self.page.css(sel))

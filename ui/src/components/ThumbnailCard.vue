@@ -42,7 +42,7 @@ const statusCode = computed(() => props.resource.status || props.resource.res_st
 const isImage = computed(() => typeKey.value === 'image')
 
 const typeLabel = computed(() => {
-  const map = { image: '图片', video: '视频', doc: '文档', 'text/article': '文章' }
+  const map = { image: '图片', video: '视频', doc: '文档' }
   return map[typeKey.value] || typeKey.value || '未知'
 })
 

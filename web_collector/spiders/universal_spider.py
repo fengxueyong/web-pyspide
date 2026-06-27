@@ -5,7 +5,7 @@ import scrapy
 from web_collector.items import WebPageItem, MediaItem
 from web_collector.extractors import (
     ContentClassifier, TextExtractor, ImageExtractor,
-    NewsExtractor, DocExtractor, VideoExtractor, AudioExtractor,
+    NewsExtractor, DocExtractor, VideoExtractor,
 )
 
 
@@ -17,7 +17,7 @@ class UniversalSpider(scrapy.Spider):
     def __init__(self, urls="", content_types="text", depth=1, task_id=None, *args, **kwargs):
         """
         urls:          逗号分隔的 URL 列表
-        content_types: 逗号分隔的目标内容类型 (text,image,news,video,audio)
+        content_types: 逗号分隔的目标内容类型 (text,image,news,video)
         depth:         爬取深度（1=仅当前页）
         task_id:       关联的 MySQL 抓取任务 ID（由 CrawlService 传入）
         """
@@ -32,7 +32,6 @@ class UniversalSpider(scrapy.Spider):
         self.news_extractor = NewsExtractor()
         self.doc_extractor = DocExtractor()
         self.video_extractor = VideoExtractor()
-        self.audio_extractor = AudioExtractor()
 
         # 全局 URL 去重（同一次爬取中相同链接只处理一次）
         self._seen_urls = set()
@@ -64,15 +63,13 @@ class UniversalSpider(scrapy.Spider):
             if ctype == "video":
                 yield from self._extract_videos(html, url)
 
-            if ctype == "audio":
-                yield from self._extract_audios(html, url)
 
         # 3. 链接追踪（深度 > 1 时递归爬取同域名下的链接）
         if cur_depth < self.max_depth:
             yield from self._follow_links(response)
 
     SKIP_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-                        ".zip", ".rar", ".7z", ".tar", ".gz", ".mp3", ".mp4",
+                        ".zip", ".rar", ".7z", ".tar", ".gz", ".mp4",
                         ".avi", ".mov", ".wmv", ".jpg", ".jpeg", ".png", ".gif",
                         ".webp", ".svg", ".ico", ".css", ".js", ".json", ".xml"}
 
@@ -180,19 +177,6 @@ class UniversalSpider(scrapy.Spider):
                 media_type="video",
                 filename=v["id"],
                 metadata={"format": v["format"], "source_type": v["source_type"]},
-            )
-
-    def _extract_audios(self, html, url):
-        audios = self.audio_extractor.extract(html, url)
-        for a in audios:
-            if not self._dedup_url(a["url"]):
-                continue
-            yield MediaItem(
-                url=a["url"],
-                source_page=url,
-                media_type="audio",
-                filename=a["id"],
-                metadata={"format": a["format"], "source_type": a["source_type"]},
             )
 
     def _extract_images(self, html, url):

@@ -94,14 +94,6 @@ class MySQLResourcePipeline:
         if not task_id:
             return item
 
-        # 防御：忽略 text/article 资源（前端"全部类型"仅含 image/video/doc）
-        if isinstance(item, WebPageItem):
-            spider_types = getattr(spider, "target_types", [])
-            if not any(t in spider_types for t in ("text", "news")):
-                return item
-            self._save_page(item, task_id)
-            return item
-
         if isinstance(item, MediaItem):
             self._save_media(item, task_id)
 
@@ -146,43 +138,6 @@ class MySQLResourcePipeline:
             "object_id": object_id,
         })
 
-    def _save_page(self, item, task_id):
-        object_id = item.get("_mongo_id")
-        res_size = item.get("_content_size", 0)
-
-        session_check = next(get_session())
-        try:
-            if crud.resource_exists(session_check, task_id, item["url"]):
-                return
-        finally:
-            session_check.close()
-
-        session = next(get_session())
-        try:
-            crud.create_resource(
-                session=session,
-                scrap_task_id=task_id,
-                res_type="text/article",
-                website=item["url"],
-                res_link=item["url"],
-                object_id=object_id,
-                res_size=res_size,
-                extension={"title": item.get("title", ""), "word_count": item["metadata"].get("word_count", 0)},
-            )
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.error(f"MySQL 页面记录失败 [{item['url']}]: {e}")
-            return
-        finally:
-            session.close()
-
-        _emit_progress("resource_found", {
-            "task_id": task_id,
-            "res_link": item["url"],
-            "res_type": "text/article",
-            "object_id": object_id,
-        })
 
 
 class MongoDBPipeline:

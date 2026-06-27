@@ -134,7 +134,7 @@ import { useWebSocket } from '../composables/useWebSocket'
 
 const emit = defineEmits(['crawl-started', 'resources-update'])
 
-const { connected, messages, lastMessage, connect } = useWebSocket()
+const { lastMessage, connect } = useWebSocket()
 
 // Form state
 const url = ref('')

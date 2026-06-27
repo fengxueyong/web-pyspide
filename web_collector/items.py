@@ -19,7 +19,7 @@ class MediaItem(scrapy.Item):
     """媒体文件（图片/视频/音频）"""
     url = scrapy.Field()
     source_page = scrapy.Field()
-    media_type = scrapy.Field()        # image / video / audio
+    media_type = scrapy.Field()        # image / video / doc
     filename = scrapy.Field()
     mime_type = scrapy.Field()
     metadata = scrapy.Field()

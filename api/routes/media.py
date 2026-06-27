@@ -15,7 +15,7 @@ def _db():
 
 @router.get("")
 def list_media(
-    media_type: str = Query("", description="过滤类型: image / video / audio"),
+    media_type: str = Query("", description="过滤类型: image / video"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):

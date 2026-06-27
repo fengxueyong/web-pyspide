@@ -37,7 +37,7 @@ const depth = computed(() => props.resource.depth || 1)
 const contentType = computed(() => props.resource.contentType || props.resource.res_type || '')
 
 const typeLabel = computed(() => {
-  const map = { image: '图片', video: '视频', doc: '文档', 'text/article': '文章' }
+  const map = { image: '图片', video: '视频', doc: '文档' }
   return map[typeKey.value] || typeKey.value || '未知'
 })
 

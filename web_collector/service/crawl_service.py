@@ -19,7 +19,6 @@ RES_TYPE_MAP = {
     "all": "image,video,doc",
     "image": "image",
     "video": "video",
-    "audio": "audio",
     "doc": "doc",
 }
 

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-VALID_RES_TYPES = {"all", "text/article", "image", "doc", "audio", "video"}
+VALID_RES_TYPES = {"all", "image", "doc", "video"}
 
 
 def _parse_time(val: Optional[str]) -> Optional[datetime]:

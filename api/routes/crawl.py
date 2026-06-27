@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-VALID_RES_TYPES = {"all", "text/article", "image", "doc", "audio", "video"}
+VALID_RES_TYPES = {"all", "image", "doc", "video"}
 VALID_SAVE_METHODS = {"only_record", "download"}
 
 

@@ -70,8 +70,7 @@ class ResourceService:
     def get_resource(self, resource_id: int) -> Optional[dict[str, Any]]:
         """
         查询单个资源，若 object_id 存在则查询对应的存储后端。
-        - text/article → MongoDB
-        - pic/doc/audio/video → MinIO 路径
+        - image/doc/video → MinIO 路径（object_id 以 web-collector/ 开头）
         """
         session = next(get_session())
         try:
@@ -97,15 +96,11 @@ class ResourceService:
             if not resource.object_id:
                 return result
 
-            # 根据资源类型查询对应存储后端
-            if resource.res_type in ("text/article",):
-                result["storage_data"] = self._query_mongodb(resource.object_id)
-            elif resource.object_id.startswith("web-collector/"):
-                # MinIO 路径格式: bucket/path
-                result["storage_data"] = {
-                    "storage": "minio",
-                    "path": resource.object_id,
-                }
+            # MinIO 路径格式: bucket/path
+            result["storage_data"] = {
+                "storage": "minio",
+                "path": resource.object_id,
+            }
 
             return result
         finally:
