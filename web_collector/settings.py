@@ -23,6 +23,18 @@ TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
 PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": True,
+    # 反 headless 检测：隐藏 navigator.webdriver 标志
+    # 某些网站（如花瓣网）会检测浏览器是否为自动化工具
+    "args": [
+        "--disable-blink-features=AutomationControlled",  # 移除自动化标记
+        "--no-sandbox",                                    # Docker 环境必需
+        "--disable-dev-shm-usage",                         # 防止 /dev/shm 内存不足
+    ],
+}
+# Playwright 浏览器上下文配置：模拟真实用户环境
+PLAYWRIGHT_CONTEXT_KWARGS = {
+    "locale": "zh-CN",
+    "timezone_id": "Asia/Shanghai",
 }
 
 DOWNLOADER_MIDDLEWARES = {
